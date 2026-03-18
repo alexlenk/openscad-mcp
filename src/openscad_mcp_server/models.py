@@ -21,7 +21,9 @@ class LibraryCatalogEntry:
     name: str
     description: str
     source_url: str
+    category: str | None = None
     docs_url: str | None = None
+    license: str | None = None
 
 
 @dataclass
