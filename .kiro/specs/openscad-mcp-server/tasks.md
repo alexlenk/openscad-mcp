@@ -110,21 +110,21 @@ NOTE: Always merge the feature branch after done developing a task
     - **Property 24: Library review enforcement on save**
     - **Validates: Requirements 17.2, 17.3**
 
-- [ ] 10. MCP tool handlers - build and render
-  - [ ] 10.1 Create `src/openscad_mcp_server/tools/build_stl.py` with `build-stl` tool: launches build container via `ContainerManager.run()` with working directory and library mounts, runs `openscad -o output.stl <file>`, returns STL path or full error output
+- [x] 10. MCP tool handlers - build and render
+  - [x] 10.1 Create `src/openscad_mcp_server/tools/build_stl.py` with `build-stl` tool: launches build container via `ContainerManager.run()` with working directory and library mounts, runs `openscad -o output.stl <file>`, returns STL path or full error output
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
-  - [ ] 10.2 Create `src/openscad_mcp_server/tools/render_images.py` with `render-images` tool: launches render container for each of 8 camera angles, generates 1024x1024 PNG images, reads PNGs from disk, returns list of MCP `TextContent` (camera metadata) and `ImageContent` blocks (base64 PNG). Handles partial failures by reporting failed angles
+  - [x] 10.2 Create `src/openscad_mcp_server/tools/render_images.py` with `render-images` tool: launches render container for each of 8 camera angles, generates 1024x1024 PNG images, reads PNGs from disk, returns list of MCP `TextContent` (camera metadata) and `ImageContent` blocks (base64 PNG). Handles partial failures by reporting failed angles
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 7.1, 7.2_
-  - [ ] 10.3 Write property test for render produces 8 images (Property 7: Render produces exactly 8 images with correct angles)
+  - [x] 10.3 Write property test for render produces 8 images (Property 7: Render produces exactly 8 images with correct angles)
     - **Property 7: Render produces exactly 8 images with correct angles**
     - **Validates: Requirements 6.1, 6.2, 6.4**
-  - [ ] 10.4 Write property test for render command spec (Property 8: Render command specifies PNG at 1024x1024)
+  - [x] 10.4 Write property test for render command spec (Property 8: Render command specifies PNG at 1024x1024)
     - **Property 8: Render command specifies PNG at 1024x1024**
     - **Validates: Requirements 6.5**
-  - [ ] 10.5 Write property test for partial render failure (Property 9: Partial render failure reports failed angles)
+  - [x] 10.5 Write property test for partial render failure (Property 9: Partial render failure reports failed angles)
     - **Property 9: Partial render failure reports failed angles**
     - **Validates: Requirements 6.6**
-  - [ ] 10.6 Write property test for MCP ImageContent blocks (Property 10: Render tool returns MCP ImageContent blocks)
+  - [x] 10.6 Write property test for MCP ImageContent blocks (Property 10: Render tool returns MCP ImageContent blocks)
     - **Property 10: Render tool returns MCP ImageContent blocks**
     - **Validates: Requirements 7.1, 7.2**
 
