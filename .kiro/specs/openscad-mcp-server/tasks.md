@@ -42,26 +42,26 @@ Incremental implementation of the OpenSCAD MCP server in Python, building from c
     - **Property 6: Container start failure diagnostics**
     - **Validates: Requirements 5.6, 8.4**
 
-- [ ] 4. File manager service
-  - [ ] 4.1 Create `src/openscad_mcp_server/services/file_manager.py` with `FileManager` class: manages working area (`working/`), final output (`output/`), libraries (`libraries/`), feedback (`feedback/`) directories. Methods: `save_code(code, filename)` with `.scad` extension normalization, `save_stl(data, filename)`, `save_renders(images)`, `clear_renders()`, `finalize()` copying working area to output, `ensure_dirs()` for auto-creation
+- [x] 4. File manager service
+  - [x] 4.1 Create `src/openscad_mcp_server/services/file_manager.py` with `FileManager` class: manages working area (`working/`), final output (`output/`), libraries (`libraries/`), feedback (`feedback/`) directories. Methods: `save_code(code, filename)` with `.scad` extension normalization, `save_stl(data, filename)`, `save_renders(images)`, `clear_renders()`, `finalize()` copying working area to output, `ensure_dirs()` for auto-creation
     - _Requirements: 4.1, 4.3, 4.4, 11.1, 11.2, 11.3, 11.4, 11.5, 11.6_
-  - [ ] 4.2 Write property test for save-code round trip (Property 1: Save-code round trip)
+  - [x] 4.2 Write property test for save-code round trip (Property 1: Save-code round trip)
     - **Property 1: Save-code round trip**
     - **Validates: Requirements 4.1, 4.4**
-  - [ ] 4.3 Write property test for filename extension normalization (Property 2: Filename extension normalization)
+  - [x] 4.3 Write property test for filename extension normalization (Property 2: Filename extension normalization)
     - **Property 2: Filename extension normalization**
     - **Validates: Requirements 4.3**
-  - [ ] 4.4 Write property test for working area overwrite invariant (Property 16: Working area overwrite invariant)
+  - [x] 4.4 Write property test for working area overwrite invariant (Property 16: Working area overwrite invariant)
     - **Property 16: Working area overwrite invariant**
     - **Validates: Requirements 11.1, 11.2, 11.3, 11.4**
-  - [ ] 4.5 Write property test for finalize copies all artifacts (Property 17: Finalize copies all working area artifacts)
+  - [x] 4.5 Write property test for finalize copies all artifacts (Property 17: Finalize copies all working area artifacts)
     - **Property 17: Finalize copies all working area artifacts**
     - **Validates: Requirements 11.5**
 
-- [ ] 5. Checkpoint - Core services
+- [~] 5. Checkpoint - Core services
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 6. Library service
+- [~] 6. Library service
   - [ ] 6.1 Create `src/openscad_mcp_server/services/library_service.py` with `LibraryService` class: `browse_catalog(force_refresh)` fetching and parsing `openscad.org/libraries.html` with BeautifulSoup, `fetch_library(name, source_url, force_refresh)` cloning/downloading from source repo, `read_source(name)` reading `.scad` files and extracting module signatures. Includes session-level catalog cache and library cache with force-refresh support
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.7, 9.8, 17.1, 17.4_
   - [ ] 6.2 Write property test for catalog parser (Property 11: Catalog parser extracts structured entries)
