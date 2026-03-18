@@ -60,25 +60,25 @@ NOTE: Always merge the feature branch after done developing a task
     - **Property 17: Finalize copies all working area artifacts**
     - **Validates: Requirements 11.5**
 
-- [~] 5. Checkpoint - Core services
+- [x] 5. Checkpoint - Core services
   - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 6. Library service
-  - [ ] 6.1 Create `src/openscad_mcp_server/services/library_service.py` with `LibraryService` class: `browse_catalog(force_refresh)` fetching and parsing `openscad.org/libraries.html` with BeautifulSoup, `fetch_library(name, source_url, force_refresh)` cloning/downloading from source repo, `read_source(name)` reading `.scad` files and extracting module signatures. Includes session-level catalog cache and library cache with force-refresh support
+- [x] 6. Library service
+  - [x] 6.1 Create `src/openscad_mcp_server/services/library_service.py` with `LibraryService` class: `browse_catalog(force_refresh)` fetching and parsing `openscad.org/libraries.html` with BeautifulSoup, `fetch_library(name, source_url, force_refresh)` cloning/downloading from source repo, `read_source(name)` reading `.scad` files and extracting module signatures. Includes session-level catalog cache and library cache with force-refresh support
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.7, 9.8, 17.1, 17.4_
-  - [ ] 6.2 Write property test for catalog parser (Property 11: Catalog parser extracts structured entries)
+  - [x] 6.2 Write property test for catalog parser (Property 11: Catalog parser extracts structured entries)
     - **Property 11: Catalog parser extracts structured entries**
     - **Validates: Requirements 9.1**
-  - [ ] 6.3 Write property test for library cache hit (Property 12: Library cache hit avoids re-download)
+  - [x] 6.3 Write property test for library cache hit (Property 12: Library cache hit avoids re-download)
     - **Property 12: Library cache hit avoids re-download**
     - **Validates: Requirements 9.5**
-  - [ ] 6.4 Write property test for fetch success (Property 13: Fetch-library success returns valid path)
+  - [x] 6.4 Write property test for fetch success (Property 13: Fetch-library success returns valid path)
     - **Property 13: Fetch-library success returns valid path**
     - **Validates: Requirements 9.7**
-  - [ ] 6.5 Write property test for fetch failure (Property 14: Fetch-library failure includes source URL)
+  - [x] 6.5 Write property test for fetch failure (Property 14: Fetch-library failure includes source URL)
     - **Property 14: Fetch-library failure includes source URL**
     - **Validates: Requirements 9.8**
-  - [ ] 6.6 Write property test for read-library-source (Property 23: Read-library-source returns source and summary)
+  - [x] 6.6 Write property test for read-library-source (Property 23: Read-library-source returns source and summary)
     - **Property 23: Read-library-source returns source and summary**
     - **Validates: Requirements 2.2, 2.4, 17.1, 17.4**
 
@@ -95,18 +95,18 @@ NOTE: Always merge the feature branch after done developing a task
     - **Property 20: Confidence disagreement flag logic**
     - **Validates: Requirements 12.9**
 
-- [ ] 8. Checkpoint - All services complete
+- [x] 8. Checkpoint - All services complete
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. MCP tool handlers - init and save-code
-  - [ ] 9.1 Create `src/openscad_mcp_server/tools/init_tool.py` with `init` tool: probes Docker then Finch via `ContainerManager.detect()`, runs test container, returns runtime info and persistence content for LLM memory
+- [x] 9. MCP tool handlers - init and save-code
+  - [x] 9.1 Create `src/openscad_mcp_server/tools/init_tool.py` with `init` tool: probes Docker then Finch via `ContainerManager.detect()`, runs test container, returns runtime info and persistence content for LLM memory
     - _Requirements: 10.1, 10.5, 10.6_
-  - [ ] 9.2 Write property test for init runtime detection (Property 15: Init tool runtime detection)
+  - [x] 9.2 Write property test for init runtime detection (Property 15: Init tool runtime detection)
     - **Property 15: Init tool runtime detection**
     - **Validates: Requirements 10.1, 10.5**
-  - [ ] 9.3 Create `src/openscad_mcp_server/tools/save_code.py` with `save-code` tool: validates filename, parses `include`/`use` statements, checks session for library review status, delegates to `FileManager.save_code()`. Rejects save if referenced libraries not reviewed
+  - [x] 9.3 Create `src/openscad_mcp_server/tools/save_code.py` with `save-code` tool: validates filename, parses `include`/`use` statements, checks session for library review status, delegates to `FileManager.save_code()`. Rejects save if referenced libraries not reviewed
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 17.2, 17.3_
-  - [ ] 9.4 Write property test for library review enforcement (Property 24: Library review enforcement on save)
+  - [x] 9.4 Write property test for library review enforcement (Property 24: Library review enforcement on save)
     - **Property 24: Library review enforcement on save**
     - **Validates: Requirements 17.2, 17.3**
 
