@@ -26,19 +26,19 @@ Incremental implementation of the OpenSCAD MCP server in Python, building from c
     - **Property 22: Overall confidence is minimum of per-angle scores**
     - **Validates: Requirements 16.8**
 
-- [ ] 3. Container manager service
-  - [ ] 3.1 Create `src/openscad_mcp_server/services/container.py` with `ContainerManager` class: `__init__(runtime, executable)`, `detect()` static method probing Docker then Finch, `run(image, command, mounts, timeout)` executing container via `asyncio.create_subprocess_exec`, `image_exists(image)`, `build_image(dockerfile, tag)`
+- [x] 3. Container manager service
+  - [x] 3.1 Create `src/openscad_mcp_server/services/container.py` with `ContainerManager` class: `__init__(runtime, executable)`, `detect()` static method probing Docker then Finch, `run(image, command, mounts, timeout)` executing container via `asyncio.create_subprocess_exec`, `image_exists(image)`, `build_image(dockerfile, tag)`
     - _Requirements: 5.1, 5.2, 6.3, 8.3, 10.1_
-  - [ ] 3.2 Write property test for container command generation (Property 3: Runtime-agnostic commands)
+  - [x] 3.2 Write property test for container command generation (Property 3: Runtime-agnostic commands)
     - **Property 3: Container command generation is runtime-agnostic**
     - **Validates: Requirements 5.2, 6.3**
-  - [ ] 3.3 Write property test for container mount correctness (Property 4: Container mount correctness)
+  - [x] 3.3 Write property test for container mount correctness (Property 4: Container mount correctness)
     - **Property 4: Container mount correctness**
     - **Validates: Requirements 5.5, 9.6**
-  - [ ] 3.4 Write property test for build error propagation (Property 5: Build error propagation)
+  - [x] 3.4 Write property test for build error propagation (Property 5: Build error propagation)
     - **Property 5: Build error propagation**
     - **Validates: Requirements 5.4**
-  - [ ] 3.5 Write property test for container start failure diagnostics (Property 6: Container start failure diagnostics)
+  - [x] 3.5 Write property test for container start failure diagnostics (Property 6: Container start failure diagnostics)
     - **Property 6: Container start failure diagnostics**
     - **Validates: Requirements 5.6, 8.4**
 
