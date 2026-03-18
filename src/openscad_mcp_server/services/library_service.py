@@ -187,6 +187,9 @@ class LibraryService:
     def read_source(self, name: str) -> LibrarySource:
         """Read all ``.scad`` files from a fetched library and extract module signatures.
 
+        Returns signatures only (no full source code) to avoid blowing the
+        context window on large libraries like BOSL2 or YAPP_Box.
+
         Raises :class:`LibraryServiceError` if the library has not been fetched.
         """
         lib_dir = self.libraries_dir / name
@@ -201,17 +204,40 @@ class LibraryService:
                 f"Library {name!r} contains no .scad files.",
             )
 
-        source_parts: list[str] = []
         all_modules: list[ModuleSignature] = []
+        file_listing: list[str] = []
+        sample_source = ""
 
         for scad_file in scad_files:
             content = scad_file.read_text(encoding="utf-8", errors="replace")
-            source_parts.append(f"// --- {scad_file.relative_to(lib_dir)} ---\n{content}")
-            all_modules.extend(self._extract_modules(content))
+            rel_path = str(scad_file.relative_to(lib_dir))
+            file_modules = self._extract_modules(content)
+            all_modules.extend(file_modules)
+            if file_modules:
+                sigs = ", ".join(m.name for m in file_modules)
+                file_listing.append(f"{rel_path}: {sigs}")
+            else:
+                file_listing.append(rel_path)
+            if not sample_source:
+                sample_source = content[:500]
 
-        source_code = "\n\n".join(source_parts)
-        coordinate_system = self._detect_coordinate_system(source_code)
-        units = self._detect_units(source_code)
+        coordinate_system = self._detect_coordinate_system(sample_source)
+        units = self._detect_units(sample_source)
+
+        # Build a compact summary instead of full source
+        summary_lines = [f"# {name} — {len(scad_files)} files, {len(all_modules)} modules\n"]
+        summary_lines.append("## File listing\n")
+        for entry in file_listing:
+            summary_lines.append(f"  {entry}")
+        summary_lines.append("\n## Module signatures\n")
+        for mod in all_modules:
+            params = ", ".join(
+                p["name"] + (f"={p['default']}" if "default" in p else "")
+                for p in mod.parameters
+            )
+            summary_lines.append(f"  module {mod.name}({params})")
+
+        source_code = "\n".join(summary_lines)
 
         return LibrarySource(
             name=name,
@@ -220,6 +246,40 @@ class LibraryService:
             coordinate_system=coordinate_system,
             units=units,
         )
+
+    def read_source_file(self, name: str, file_path: str, module_name: str | None = None) -> str:
+        """Read a specific file (or a specific module within it) from a fetched library.
+
+        Parameters
+        ----------
+        name
+            Library name.
+        file_path
+            Relative path to a ``.scad`` file within the library.
+        module_name
+            If provided, return only the source of this module definition.
+
+        Raises :class:`LibraryServiceError` if the library or file is not found.
+        """
+        lib_dir = self.libraries_dir / name
+        if not lib_dir.exists():
+            raise LibraryServiceError(
+                f"Library {name!r} not found. Run fetch-library first.",
+            )
+
+        target = lib_dir / file_path
+        if not target.exists():
+            raise LibraryServiceError(
+                f"File {file_path!r} not found in library {name!r}.",
+            )
+
+        content = target.read_text(encoding="utf-8", errors="replace")
+
+        if module_name is None:
+            return content
+
+        # Extract the specific module definition
+        return self._extract_module_source(content, module_name)
 
     # ------------------------------------------------------------------
     # Module signature extraction
@@ -272,3 +332,36 @@ class LibraryService:
         if "inch" in lower or "inches" in lower:
             return "inches"
         return None
+
+    @staticmethod
+    def _extract_module_source(source: str, module_name: str) -> str:
+        """Extract the full source of a specific module definition by tracking braces.
+
+        Returns the module source from ``module name(...)`` through its closing brace.
+        Raises :class:`LibraryServiceError` if the module is not found.
+        """
+        pattern = re.compile(rf"^\s*module\s+{re.escape(module_name)}\s*\(", re.MULTILINE)
+        match = pattern.search(source)
+        if not match:
+            raise LibraryServiceError(
+                f"Module {module_name!r} not found in file.",
+            )
+
+        start = match.start()
+        # Find the opening brace
+        brace_pos = source.find("{", match.end())
+        if brace_pos == -1:
+            # No body — return just the signature line
+            line_end = source.find("\n", match.end())
+            return source[start:line_end if line_end != -1 else len(source)]
+
+        depth = 1
+        pos = brace_pos + 1
+        while pos < len(source) and depth > 0:
+            if source[pos] == "{":
+                depth += 1
+            elif source[pos] == "}":
+                depth -= 1
+            pos += 1
+
+        return source[start:pos]

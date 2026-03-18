@@ -33,7 +33,8 @@ _executables = st.sampled_from(["/usr/bin/docker", "/usr/local/bin/finch", "/opt
 @settings(max_examples=50)
 def test_init_detects_available_runtime(runtime: str, executable: str) -> None:
     """When exactly one runtime is available, init should detect and return it,
-    persist it in session state, and produce valid persistence content."""
+    persist it in session state, and produce valid persistence content.
+    Working directory should be the current working directory."""
     session = SessionState()
 
     with patch(
@@ -53,6 +54,28 @@ def test_init_detects_available_runtime(runtime: str, executable: str) -> None:
     assert session.container_runtime == runtime
     assert session.container_executable == executable
     assert session.working_dir is not None
+
+
+# Feature: openscad-mcp-server, Property 15: Working dir is cwd
+@given(runtime=_runtimes, executable=_executables)
+@settings(max_examples=10)
+def test_init_uses_cwd_as_working_dir(runtime: str, executable: str) -> None:
+    """Init should use the current working directory (the user's project dir),
+    not a temp directory."""
+    import os
+    session = SessionState()
+
+    with patch(
+        "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+        new_callable=AsyncMock,
+        return_value=(runtime, executable),
+    ):
+        result: InitResult = asyncio.run(run_init(session))
+
+    from pathlib import Path
+    expected = str(Path.cwd().resolve())
+    assert result.working_dir == expected
+    assert str(session.working_dir) == expected
 
 
 # Feature: openscad-mcp-server, Property 15: Docker preferred over Finch

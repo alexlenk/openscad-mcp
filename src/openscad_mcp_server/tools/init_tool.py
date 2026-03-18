@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,10 +35,12 @@ SUPPORTED_RUNTIMES_MSG = (
 
 
 async def run_init(session: SessionState) -> InitResult:
-    """Detect container runtime, run a test container, and return config.
+    """Detect container runtime and use the current working directory.
 
-    Probes Docker first, then Finch. Runs ``echo ok`` in a lightweight
-    container to verify the runtime actually works end-to-end.
+    The working directory is the process's cwd — which is the user's
+    project directory when launched by an MCP client like Kiro. All files
+    (code, STL, renders, libraries) live here so they're visible in the
+    IDE and tracked by git.
 
     Raises
     ------
@@ -52,7 +53,7 @@ async def run_init(session: SessionState) -> InitResult:
 
     runtime, executable = detection
 
-    working_dir = Path(tempfile.mkdtemp(prefix="openscad-mcp-")).resolve()
+    working_dir = Path.cwd().resolve()
 
     # Persist into session state
     session.container_runtime = runtime

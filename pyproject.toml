@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openscad-mcp-server"
-version = "0.11.0"
+version = "0.12.0"
 description = "MCP server for OpenSCAD 3D model generation, compilation, and visual inspection"
 readme = "README.md"
 license = "MIT"

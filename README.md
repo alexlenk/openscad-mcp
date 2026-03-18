@@ -10,7 +10,7 @@ LLMs can write OpenSCAD code, but they can't run it, see the result, or iterate 
 
 Key design choices:
 - **Vision-native**: Rendered images come back as MCP `ImageContent` blocks, not file paths. The LLM sees the model directly.
-- **Zero config**: The `init` tool auto-detects Docker or Finch and persists settings via the LLM's memory mechanism. No env vars or config files needed.
+- **Zero config**: The `init` tool auto-detects Docker or Finch and uses the current working directory so files are visible in your IDE. Settings are persisted via the LLM's memory mechanism. No env vars or config files needed.
 - **Library-aware**: Libraries are discovered from the [official OpenSCAD catalog](https://openscad.org/libraries.html) and downloaded on demand. The server enforces that the LLM reads library source code before using it — no guessing at APIs.
 - **Correctness-first**: The workflow prompt requires per-angle confidence scoring (overall = min of all angles) and forbids declaring a model complete below 0.5 confidence.
 
@@ -73,11 +73,11 @@ Add to your Claude Desktop config:
 
 ## Tools
 
-The server exposes 13 tools:
+The server exposes 14 tools:
 
 | Tool | Description |
 |---|---|
-| `init` | Auto-detect Docker/Finch, configure working directory, return persistence content |
+| `init` | Auto-detect Docker/Finch, use current working directory, return persistence content |
 | `save-code` | Save OpenSCAD code to the working area (enforces library review) |
 | `check-syntax` | Fast syntax validation without full STL compilation |
 | `build-stl` | Compile `.scad` → `.stl` in a container (returns mesh metadata) |
@@ -85,7 +85,8 @@ The server exposes 13 tools:
 | `render-images` | Render STL from 8 camera angles (or selective via `angles` param), return inline base64 PNG images |
 | `browse-library-catalog` | Fetch the official OpenSCAD library listing |
 | `fetch-library` | Download a library from its source repository |
-| `read-library-source` | Read library `.scad` files and extract module signatures |
+| `read-library-source` | Read library module signatures and file listing (compact overview, no full source) |
+| `read-library-file` | Read the source of a specific file or module from a fetched library |
 | `list-reviewed-libraries` | Show which libraries have been reviewed this session |
 | `submit-feedback` | Record user feedback with artifact snapshots and confidence data |
 | `list-feedback` | List all feedback records for analysis |
@@ -133,7 +134,7 @@ The LLM inspects each rendered angle individually, assigns per-angle confidence 
 ## Artifact layout
 
 ```
-{working_dir}/
+your-project/
 ├── working/          # Latest iteration (overwritten each cycle)
 │   ├── model.scad
 │   ├── model.stl
@@ -168,7 +169,7 @@ uv run pytest tests/ -v --hypothesis-show-statistics
 
 ### Test suite
 
-The test suite includes 67 tests covering all 25 correctness properties from the design spec, validated with [Hypothesis](https://hypothesis.readthedocs.io/) property-based testing:
+The test suite includes 72 tests covering all 25 correctness properties from the design spec, validated with [Hypothesis](https://hypothesis.readthedocs.io/) property-based testing:
 
 - Save-code round trip and filename normalization
 - Container command generation (runtime-agnostic)

@@ -42,6 +42,14 @@ class ListReviewedResult:
     reviewed: list[str]
 
 
+@dataclass
+class ReadLibraryFileResult:
+    """Result from the read-library-file tool."""
+
+    file_path: str
+    source: str
+
+
 # ------------------------------------------------------------------
 # Tool implementations
 # ------------------------------------------------------------------
@@ -108,3 +116,23 @@ def run_read_library_source(
 def run_list_reviewed_libraries(session: SessionState) -> ListReviewedResult:
     """Return the list of libraries reviewed in the current session."""
     return ListReviewedResult(reviewed=sorted(session.reviewed_libraries))
+
+
+def run_read_library_file(
+    library_name: str,
+    file_path: str,
+    library_service: LibraryService,
+    module_name: str | None = None,
+) -> ReadLibraryFileResult:
+    """Read a specific file or module from a fetched library.
+
+    Use this for targeted deep-dives after ``read-library-source`` has
+    returned the signatures overview.
+
+    Raises
+    ------
+    LibraryServiceError
+        If the library or file is not found, or the module doesn't exist.
+    """
+    source = library_service.read_source_file(library_name, file_path, module_name)
+    return ReadLibraryFileResult(file_path=file_path, source=source)

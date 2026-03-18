@@ -32,7 +32,7 @@ server configuration (container runtime, executable path, working directory).
 3. If no persisted settings are found, invoke the `init` tool.
    - The init tool detects whether Docker or Finch is available, runs a test \
 container, and returns the detected runtime, executable path, working \
-directory, and formatted persistence content.
+directory (the user's current project directory), and formatted persistence content.
 4. Persist the returned settings using your native memory mechanism \
 (e.g., a steering file for Kiro, CLAUDE.md for Claude Code, or equivalent) \
 so future sessions skip this step.
@@ -101,14 +101,18 @@ For each library you intend to use:
 1. Invoke the `fetch-library` tool with the library name and source URL \
 from the catalog. This downloads the library to the working directory.
 2. Invoke the `read-library-source` tool with the library name. This \
-returns the full source code of all `.scad` files in the library along \
-with a structured summary of module signatures, parameter types, defaults, \
-coordinate system conventions, and unit conventions.
-3. Study the returned source code and summary carefully. Record:
+returns a compact overview: file listing, module signatures with parameter \
+names and defaults, coordinate system, and unit conventions. It does NOT \
+return full source code (to avoid filling the context window).
+3. Study the returned signatures carefully. Record:
    - Every module name and its full parameter signature
    - The coordinate system orientation (e.g., right-hand, Z-up)
    - The unit conventions (e.g., millimeters)
    - Any special parameter conventions or ordering requirements
+4. If you need to see the full implementation of a specific module, invoke \
+the `read-library-file` tool with the library name, file path, and \
+optionally a module name. This returns only the requested source — not \
+the entire library.
 
 ### PROHIBITION: No Guessing at Library APIs
 
@@ -116,11 +120,12 @@ coordinate system conventions, and unit conventions.
 you have first invoked `read-library-source` for that library in this session.
 - You MUST NOT guess at module names, parameter names, parameter order, \
 default values, or coordinate conventions.
-- If you are unsure about any aspect of a library's API, re-read the source.
+- If you are unsure about any aspect of a library's API, use \
+`read-library-file` to inspect the specific module source.
 - The `save-code` tool will reject code that references libraries whose \
 source has not been reviewed in the current session.
 
-**Tools used:** `fetch-library`, `read-library-source`
+**Tools used:** `fetch-library`, `read-library-source`, `read-library-file`
 
 ---
 
@@ -372,7 +377,8 @@ To review past feedback at any time, invoke the `list-feedback` tool.
 | `init` | Detect container runtime, return persistence content |
 | `browse-library-catalog` | Fetch official OpenSCAD library catalog |
 | `fetch-library` | Download a library from its source repository |
-| `read-library-source` | Read library source code and extract module signatures |
+| `read-library-source` | Read library module signatures and file listing (compact overview) |
+| `read-library-file` | Read source of a specific file or module from a library |
 | `list-reviewed-libraries` | List libraries reviewed in this session |
 | `save-code` | Save OpenSCAD code to working area (enforces library review) |
 | `check-syntax` | Fast syntax validation without full STL compilation |

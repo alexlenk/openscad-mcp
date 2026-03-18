@@ -246,8 +246,8 @@ def test_read_library_source_returns_source_and_summary(
     unit_hint: str,
 ) -> None:
     """For any fetched library containing .scad files, read_source should return
-    the concatenated source code and a structured summary listing module names
-    and parameter signatures."""
+    a compact signatures-only summary (not full source) and a structured list of
+    module names and parameter signatures."""
     with tempfile.TemporaryDirectory() as td:
         libs_dir = Path(td) / "libraries"
         lib_dir = libs_dir / name
@@ -260,12 +260,18 @@ def test_read_library_source_returns_source_and_summary(
         svc = LibraryService(libs_dir)
         result = svc.read_source(name)
 
-        # Source code should contain all module definitions
+        # Source code should be a compact summary, not the full source
         assert result.name == name
         assert result.source_code != ""
-        for mod_src in module_sources:
-            # The module keyword and name should appear in the source
-            assert "module" in result.source_code
+        # Summary should contain "Module signatures" section
+        assert "Module signatures" in result.source_code
+        # Summary should contain module keyword for each extracted module
+        for mod in result.modules:
+            assert f"module {mod.name}(" in result.source_code
+
+        # The summary should NOT contain the full implementation bodies
+        # (no curly braces from module bodies in the summary)
+        assert "{}" not in result.source_code
 
         # Modules list should have entries for each module definition
         assert len(result.modules) >= 1
@@ -290,3 +296,84 @@ def test_read_library_source_returns_source_and_summary(
             assert result.units is not None
         if "inches" in unit_hint.lower():
             assert result.units is not None
+
+
+
+# ---------------------------------------------------------------------------
+# Property: read_source_file returns specific file content
+# ---------------------------------------------------------------------------
+
+
+@given(name=_lib_names)
+@settings(max_examples=50)
+def test_read_source_file_returns_file_content(name: str) -> None:
+    """read_source_file should return the full content of a specific .scad file."""
+    with tempfile.TemporaryDirectory() as td:
+        libs_dir = Path(td) / "libraries"
+        lib_dir = libs_dir / name
+        lib_dir.mkdir(parents=True, exist_ok=True)
+
+        content = "module box(w, d, h) {\n  cube([w, d, h]);\n}\n"
+        (lib_dir / "box.scad").write_text(content)
+
+        svc = LibraryService(libs_dir)
+        result = svc.read_source_file(name, "box.scad")
+        assert result == content
+
+
+def test_read_source_file_extracts_module() -> None:
+    """read_source_file with module_name should return only that module's source."""
+    with tempfile.TemporaryDirectory() as td:
+        libs_dir = Path(td) / "libraries"
+        lib_dir = libs_dir / "testlib"
+        lib_dir.mkdir(parents=True, exist_ok=True)
+
+        content = (
+            "module foo(a) {\n  cube(a);\n}\n\n"
+            "module bar(b, c) {\n  cylinder(h=b, r=c);\n}\n"
+        )
+        (lib_dir / "shapes.scad").write_text(content)
+
+        svc = LibraryService(libs_dir)
+
+        foo_src = svc.read_source_file("testlib", "shapes.scad", module_name="foo")
+        assert "module foo(a)" in foo_src
+        assert "cube(a)" in foo_src
+        assert "module bar" not in foo_src
+
+        bar_src = svc.read_source_file("testlib", "shapes.scad", module_name="bar")
+        assert "module bar(b, c)" in bar_src
+        assert "cylinder" in bar_src
+        assert "module foo" not in bar_src
+
+
+def test_read_source_file_missing_file() -> None:
+    """read_source_file should raise LibraryServiceError for a missing file."""
+    with tempfile.TemporaryDirectory() as td:
+        libs_dir = Path(td) / "libraries"
+        lib_dir = libs_dir / "testlib"
+        lib_dir.mkdir(parents=True, exist_ok=True)
+        (lib_dir / "main.scad").write_text("module m() {}")
+
+        svc = LibraryService(libs_dir)
+        try:
+            svc.read_source_file("testlib", "nonexistent.scad")
+            raise AssertionError("Expected LibraryServiceError")
+        except LibraryServiceError as exc:
+            assert "nonexistent.scad" in str(exc)
+
+
+def test_read_source_file_missing_module() -> None:
+    """read_source_file should raise LibraryServiceError for a missing module."""
+    with tempfile.TemporaryDirectory() as td:
+        libs_dir = Path(td) / "libraries"
+        lib_dir = libs_dir / "testlib"
+        lib_dir.mkdir(parents=True, exist_ok=True)
+        (lib_dir / "main.scad").write_text("module existing() {}")
+
+        svc = LibraryService(libs_dir)
+        try:
+            svc.read_source_file("testlib", "main.scad", module_name="nonexistent")
+            raise AssertionError("Expected LibraryServiceError")
+        except LibraryServiceError as exc:
+            assert "nonexistent" in str(exc)

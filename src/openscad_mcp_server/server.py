@@ -57,6 +57,7 @@ from openscad_mcp_server.tools.library_tools import (
     run_browse_library_catalog,
     run_fetch_library,
     run_list_reviewed_libraries,
+    run_read_library_file,
     run_read_library_source,
 )
 from openscad_mcp_server.tools.measure_stl import run_measure_stl
@@ -184,13 +185,26 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="read-library-source",
-            description="Read library source code and mark it as reviewed for this session",
+            description="Read library module signatures and file listing (compact overview, no full source). Use read-library-file for specific file/module source.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "library_name": {"type": "string", "description": "Name of the fetched library"},
                 },
                 "required": ["library_name"],
+            },
+        ),
+        Tool(
+            name="read-library-file",
+            description="Read the source of a specific file or module from a fetched library. Use after read-library-source to dive into specific implementations.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "library_name": {"type": "string", "description": "Name of the fetched library"},
+                    "file_path": {"type": "string", "description": "Relative path to a .scad file within the library"},
+                    "module_name": {"type": "string", "description": "Optional: return only this module's source from the file"},
+                },
+                "required": ["library_name", "file_path"],
             },
         ),
         Tool(
@@ -329,6 +343,20 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
         except LibraryServiceError as exc:
             return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
         return [TextContent(type="text", text=json.dumps(asdict(result.source)))]
+
+    elif name == "read-library-file":
+        fm = _get_file_manager()
+        ls = LibraryService(fm.libraries_dir)
+        try:
+            result = run_read_library_file(
+                library_name=arguments["library_name"],
+                file_path=arguments["file_path"],
+                library_service=ls,
+                module_name=arguments.get("module_name"),
+            )
+        except LibraryServiceError as exc:
+            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
+        return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "list-reviewed-libraries":
         result = run_list_reviewed_libraries(session)
