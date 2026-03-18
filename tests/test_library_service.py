@@ -43,14 +43,28 @@ _docs_urls = st.one_of(
 
 
 def _build_catalog_html(entries: list[dict]) -> str:
-    """Build a minimal HTML page with library list items."""
+    """Build a minimal HTML page matching the openscad.org/libraries.html structure."""
     items = []
     for e in entries:
-        links = f'<a href="{e["source_url"]}">{e["name"]}</a>'
+        links_html = f'<li><a href="{e["source_url"]}">Library</a></li>'
         if e.get("docs_url"):
-            links += f' <a href="{e["docs_url"]}">docs</a>'
-        items.append(f'<li><b>{e["name"]}</b> - {e["description"]} {links}</li>')
-    return f"<html><body><ul>{''.join(items)}</ul></body></html>"
+            links_html += f'<li><a href="{e["docs_url"]}">Documentation</a></li>'
+        license_val = e.get("license", "MIT")
+        links_html += f"<li>License: {license_val}</li>"
+        category = e.get("category", "General")
+        items.append(
+            f"<li><b>{e['name']}</b>\n"
+            f"{e['description']}\n"
+            f"<ul>{links_html}</ul></li>"
+        )
+    # Group all under one category header
+    category = entries[0].get("category", "General") if entries else "General"
+    return (
+        f"<html><body>"
+        f"<h3>{category}</h3>"
+        f"<ul>{''.join(items)}</ul>"
+        f"</body></html>"
+    )
 
 
 # Strategy for generating catalog entry dicts
@@ -73,7 +87,7 @@ _catalog_entry_dicts = st.fixed_dictionaries({
 def test_catalog_parser_extracts_structured_entries(entry_dicts: list[dict]) -> None:
     """For any well-formed HTML page containing library listings, the parser
     should extract at least one LibraryCatalogEntry where each entry has a
-    non-empty name, description, and source URL."""
+    non-empty name, description, source URL, category, and license."""
     html = _build_catalog_html(entry_dicts)
     entries = LibraryService.parse_catalog_html(html)
 
@@ -84,6 +98,57 @@ def test_catalog_parser_extracts_structured_entries(entry_dicts: list[dict]) -> 
         assert entry.name.strip() != ""
         assert entry.description.strip() != ""
         assert entry.source_url.startswith("http")
+        assert entry.category is not None
+        assert entry.license is not None
+
+
+def test_catalog_parser_real_html_structure() -> None:
+    """The parser should correctly extract YAPP_Box and BOSL2 from HTML
+    matching the real openscad.org/libraries.html structure."""
+    html = """\
+    <html><body>
+    <h3>General</h3>
+    <ul>
+      <li><b>BOSL2 (beta)</b>
+        Belfry OpenScad Library v2 - A library of tools, shapes, and helpers.
+        <ul>
+          <li><a href="https://github.com/BelfrySCAD/BOSL2/">Library</a></li>
+          <li><a href="https://github.com/BelfrySCAD/BOSL2/wiki">Documentation</a></li>
+          <li>License: BSD-2-Clause</li>
+        </ul>
+      </li>
+    </ul>
+    <h3>Single Topic</h3>
+    <ul>
+      <li><b>Yet Another Parametric Projectbox generator</b>
+        A generator for electronic project boxes.
+        <ul>
+          <li><a href="https://github.com/mrWheel/YAPP_Box">Library</a></li>
+          <li><a href="https://github.com/mrWheel/YAPP_Box/blob/main/README.md">Documentation</a></li>
+          <li>License: MIT</li>
+        </ul>
+      </li>
+    </ul>
+    </body></html>
+    """
+    entries = LibraryService.parse_catalog_html(html)
+
+    assert len(entries) == 2
+
+    bosl2 = entries[0]
+    assert bosl2.name == "BOSL2 (beta)"
+    assert "tools, shapes" in bosl2.description
+    assert bosl2.source_url == "https://github.com/BelfrySCAD/BOSL2/"
+    assert bosl2.docs_url == "https://github.com/BelfrySCAD/BOSL2/wiki"
+    assert bosl2.category == "General"
+    assert bosl2.license == "BSD-2-Clause"
+
+    yapp = entries[1]
+    assert yapp.name == "Yet Another Parametric Projectbox generator"
+    assert "electronic project boxes" in yapp.description
+    assert yapp.source_url == "https://github.com/mrWheel/YAPP_Box"
+    assert yapp.category == "Single Topic"
+    assert yapp.license == "MIT"
 
 
 # ---------------------------------------------------------------------------
