@@ -4,7 +4,7 @@
 
 Incremental implementation of the OpenSCAD MCP server in Python, building from core data models and services up through tool handlers, resources, prompts, container images, packaging, and CI/CD. Each task builds on previous work so there is no orphaned code.
 
-NOTE: Always merge the feature branch after done developing a task
+NOTE: After completing each task, always create a feature branch, commit, push, merge to main, and push main. Never leave work unmerged.
 
 ## Tasks
 
