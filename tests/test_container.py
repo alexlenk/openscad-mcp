@@ -90,9 +90,17 @@ def test_container_mount_correctness(
     mgr = ContainerManager("docker", "docker")
     cmd = mgr.build_run_command(image, command, mounts)
 
-    # Collect all -v mount specs from the command
+    # Only inspect the docker-options portion (before the image name).
+    # build_run_command produces: [executable, "run", "--rm", ...mounts..., image, ...command...]
+    try:
+        image_idx = cmd.index(image)
+    except ValueError:
+        raise AssertionError(f"Image {image!r} not found in command: {cmd}")
+    docker_opts = cmd[:image_idx]
+
+    # Collect all -v mount specs from the docker options only
     mount_specs: list[str] = []
-    it = iter(cmd)
+    it = iter(docker_opts)
     for token in it:
         if token == "-v":
             mount_specs.append(next(it))
