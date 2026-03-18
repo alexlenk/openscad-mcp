@@ -73,14 +73,16 @@ Add to your Claude Desktop config:
 
 ## Tools
 
-The server exposes 11 tools:
+The server exposes 13 tools:
 
 | Tool | Description |
 |---|---|
 | `init` | Auto-detect Docker/Finch, configure working directory, return persistence content |
 | `save-code` | Save OpenSCAD code to the working area (enforces library review) |
-| `build-stl` | Compile `.scad` → `.stl` in a container |
-| `render-images` | Render STL from 8 camera angles, return inline base64 PNG images |
+| `check-syntax` | Fast syntax validation without full STL compilation |
+| `build-stl` | Compile `.scad` → `.stl` in a container (returns mesh metadata) |
+| `measure-stl` | Parse an STL file and return dimensional metadata without rendering |
+| `render-images` | Render STL from 8 camera angles (or selective via `angles` param), return inline base64 PNG images |
 | `browse-library-catalog` | Fetch the official OpenSCAD library listing |
 | `fetch-library` | Download a library from its source repository |
 | `read-library-source` | Read library `.scad` files and extract module signatures |
@@ -166,7 +168,7 @@ uv run pytest tests/ -v --hypothesis-show-statistics
 
 ### Test suite
 
-The test suite includes 51 tests covering all 25 correctness properties from the design spec, validated with [Hypothesis](https://hypothesis.readthedocs.io/) property-based testing:
+The test suite includes 67 tests covering all 25 correctness properties from the design spec, validated with [Hypothesis](https://hypothesis.readthedocs.io/) property-based testing:
 
 - Save-code round trip and filename normalization
 - Container command generation (runtime-agnostic)

@@ -48,20 +48,47 @@ inform the user and stop. Do not proceed without a working container runtime.
 1. Read the user's description of the desired 3D model carefully.
 2. Identify the key geometric features, dimensions, proportions, and any \
 specific requirements (e.g., printability, tolerances, symmetry).
-3. Determine whether any external OpenSCAD libraries might be needed \
-(e.g., BOSL2 for advanced operations, threads, rounded shapes).
+3. Identify components mentioned by the user (e.g., ESP32, display, \
+speaker, microphone) and note their physical requirements.
+4. Determine whether any external OpenSCAD libraries might be needed \
+(see the library recommendation table in Step 3).
 
 ---
 
-## Step 3: Library Discovery
+## Step 3: Library Discovery (Library-First Design)
+
+Before writing any code, always check for existing library solutions. \
+Libraries produce more reliable results than hand-written code and save \
+significant iteration time.
 
 1. Invoke the `browse-library-catalog` tool to fetch the current list of \
 available OpenSCAD libraries from the official catalog.
 2. Review the catalog entries — each contains a library name, description, \
 source repository URL, and documentation URL.
-3. Select libraries that are relevant to the current task based on their \
-descriptions and the model requirements identified in Step 2.
-4. If no external libraries are needed, skip to Step 5.
+3. Use the following table to identify relevant libraries based on the task:
+
+| Keywords in user request | Recommended Library | Why |
+|---|---|---|
+| enclosure, box, case, housing, project box | YAPP_Box | Parametric project boxes with cutouts, standoffs, lids, snap-fits |
+| gear, bearing, screw, thread, bolt, nut | BOSL2 | Mechanical components, threading, fasteners |
+| ESP32, Arduino, Raspberry Pi, PCB | YAPP_Box | PCB enclosures with standoff patterns and connector cutouts |
+| display, speaker, microphone, LED | YAPP_Box | Component cutouts with proper tolerances and orientation |
+| hinge, snap-fit, clip, latch | BOSL2 or YAPP_Box | Mechanical joints and closures |
+| rounded, fillet, chamfer, bezier | BOSL2 | Advanced geometry primitives |
+| organic, sculpted, curved surface | BOSL2 | Bezier surfaces, rounded primitives |
+
+4. Select libraries that match the task. Prefer library modules over \
+hand-written equivalents — a library's parametric enclosure is more \
+reliable than a custom one.
+5. If no external libraries are needed, skip to Step 5.
+
+### PROHIBITION: No Reinventing the Wheel
+
+Before writing any custom module, verify:
+- Have you checked the library catalog for existing solutions?
+- Are you about to hand-code something that a library already provides?
+- If a library covers 80% of the need, use it and customize the rest — \
+do not rewrite the 80% from scratch.
 
 **Tools used:** `browse-library-catalog`
 
@@ -183,6 +210,35 @@ from this angle:
    - Artifacts: Is there z-fighting, missing faces, or unexpected geometry?
    - Surface quality: Are curves smooth (sufficient `$fn`)?
 
+### 8b-2: Functional Validation Checklist
+
+After the geometric checklist, answer these functional questions. \
+Skip items that do not apply to the current design.
+
+**For enclosures and multi-part designs:**
+- Can cables/wires route between all parts? Is there a physical path?
+- Do mating features align when assembled? (grilles over speakers, \
+cutouts over displays)
+- Is every component accessible for installation?
+- Are connectors (USB, power, etc.) accessible from outside?
+- Do moving/removable parts have clearance?
+
+**For each placed component:**
+- Which direction does this component face? (speaker toward grille, \
+display toward cutout, antenna away from metal)
+- Is there enough clearance around it for the component + connector + cable?
+- Does the mounting method work? (standoffs have screw holes, press-fit \
+has tolerance)
+
+**Component-specific checks:**
+- ESP32/microcontroller: USB-C access, antenna clearance (no metal near \
+antenna end), GPIO access if needed
+- Display: FPC ribbon cable has routing path, display faces outward \
+through cutout, cutout matches active area
+- Speaker: faces toward grille/opening, acoustic chamber behind it, \
+grille holes are open (not solid)
+- Microphone: clear sound path to outside, not placed adjacent to speaker
+
 ### 8c: Assign a Per-Angle Confidence Score
 
 After examining each angle, assign a confidence score between 0.0 and 1.0 \
@@ -241,6 +297,14 @@ observed in those angles.
 - You are FORBIDDEN from declaring a model complete when the overall \
 confidence score is below 0.5.
 - You MUST iterate with code corrections targeting the weakest angles.
+
+### PROHIBITION: No Finalization Without Full 8-Angle Render
+
+- The `angles` parameter on `render-images` is for quick iteration only.
+- Before proceeding to Step 10 (Finalize), you MUST have rendered and \
+inspected ALL 8 angles in the most recent render cycle.
+- If your last render used selective angles, re-run `render-images` \
+without the `angles` parameter to produce the full set before finalizing.
 
 ---
 
@@ -311,8 +375,10 @@ To review past feedback at any time, invoke the `list-feedback` tool.
 | `read-library-source` | Read library source code and extract module signatures |
 | `list-reviewed-libraries` | List libraries reviewed in this session |
 | `save-code` | Save OpenSCAD code to working area (enforces library review) |
-| `build-stl` | Compile OpenSCAD code to STL via container |
-| `render-images` | Render STL from 8 angles, return images inline |
+| `check-syntax` | Fast syntax validation without full STL compilation |
+| `build-stl` | Compile OpenSCAD code to STL via container (returns mesh metadata) |
+| `measure-stl` | Parse an STL file and return dimensional metadata without rendering |
+| `render-images` | Render from 8 angles (or selective via `angles` param), return images inline |
 | `submit-feedback` | Record user feedback with artifacts and confidence data |
 | `list-feedback` | List all feedback records |
 | `finalize` | Copy working area to final output directory |
@@ -322,13 +388,20 @@ To review past feedback at any time, invoke the `list-feedback` tool.
 ## Key Rules
 
 1. ALWAYS check for persisted settings before running `init`.
-2. ALWAYS read library source code before writing code that uses it.
-3. NEVER guess at library module signatures or coordinate conventions.
-4. ALWAYS inspect ALL 8 rendered angles individually.
-5. ALWAYS assign per-angle confidence scores after inspecting each angle.
-6. ALWAYS compute overall confidence as the minimum of per-angle scores.
-7. NEVER declare a model complete with overall confidence below 0.5.
-8. ALWAYS iterate when confidence is low, targeting the weakest angles.
-9. ALWAYS use `submit-feedback` when the user provides negative feedback.
-10. ALWAYS `finalize` before delivering the completed model to the user.
+2. ALWAYS check the library catalog before writing custom geometry code.
+3. ALWAYS read library source code before writing code that uses it.
+4. NEVER guess at library module signatures or coordinate conventions.
+5. NEVER hand-code geometry that an available library already provides.
+6. ALWAYS use `check-syntax` for quick validation before a full `build-stl`.
+7. ALWAYS inspect ALL 8 rendered angles individually.
+8. ALWAYS assign per-angle confidence scores after inspecting each angle.
+9. ALWAYS compute overall confidence as the minimum of per-angle scores.
+10. NEVER declare a model complete with overall confidence below 0.5.
+11. ALWAYS iterate when confidence is low, targeting the weakest angles.
+12. ALWAYS complete the functional validation checklist (Step 8b-2) for \
+enclosures and multi-component designs.
+13. ALWAYS render all 8 angles before finalizing — selective rendering \
+is for iteration only.
+14. ALWAYS use `submit-feedback` when the user provides negative feedback.
+15. ALWAYS `finalize` before delivering the completed model to the user.
 """

@@ -36,7 +36,7 @@ async def test_server_name():
 
 
 @pytest.mark.asyncio
-async def test_list_tools_returns_all_11():
+async def test_list_tools_returns_all_13():
     tools = await list_tools()
     names = sorted(t.name for t in tools)
     assert names == EXPECTED_TOOLS
