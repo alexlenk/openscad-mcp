@@ -101,10 +101,10 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "workspace_dir": {
                         "type": "string",
-                        "description": "The user's current working directory (pwd). Do NOT infer from open editor files — use the actual workspace root directory.",
+                        "description": "An EXISTING directory on the user's machine where files will be stored. Must already exist — do not invent or guess paths. If unsure, omit this parameter to use the server's working directory.",
                     },
                 },
-                "required": ["workspace_dir"],
+                "required": [],
             },
         ),
         Tool(
@@ -249,7 +249,10 @@ async def list_tools() -> list[Tool]:
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageContent]:
     if name == "init":
-        result = await run_init(session, workspace_dir=arguments.get("workspace_dir"))
+        try:
+            result = await run_init(session, workspace_dir=arguments.get("workspace_dir"))
+        except ValueError as exc:
+            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
         return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "save-code":

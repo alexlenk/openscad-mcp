@@ -94,24 +94,41 @@ def test_init_falls_back_to_cwd_when_no_workspace_dir() -> None:
     assert result.working_dir == expected
 
 
-# Feature: openscad-mcp-server, Property 15: workspace_dir creates dirs
-def test_init_creates_workspace_dir_if_missing() -> None:
-    """Init should create the workspace directory if it doesn't exist."""
+# Feature: openscad-mcp-server, Property 15: non-existent workspace_dir rejected
+def test_init_rejects_nonexistent_workspace_dir() -> None:
+    """Init should raise ValueError when workspace_dir does not exist,
+    and the error should suggest the server's cwd."""
     session = SessionState()
 
-    with tempfile.TemporaryDirectory() as td:
-        new_dir = Path(td) / "my-project" / "subdir"
-        assert not new_dir.exists()
+    with patch(
+        "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+        new_callable=AsyncMock,
+        return_value=("docker", "/usr/bin/docker"),
+    ):
+        with pytest.raises(ValueError, match="does not exist"):
+            asyncio.run(run_init(session, workspace_dir="/nonexistent/fake/path"))
 
-        with patch(
-            "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
-            new_callable=AsyncMock,
-            return_value=("docker", "/usr/bin/docker"),
-        ):
-            result = asyncio.run(run_init(session, workspace_dir=str(new_dir)))
+    # Session state should remain unset
+    assert session.working_dir is None
 
-        assert new_dir.exists()
-        assert result.working_dir == str(new_dir.resolve())
+
+def test_init_error_suggests_cwd() -> None:
+    """The ValueError for a bad workspace_dir should include the server's cwd
+    so the agent can self-correct."""
+    session = SessionState()
+    cwd = str(Path.cwd().resolve())
+
+    with patch(
+        "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+        new_callable=AsyncMock,
+        return_value=("docker", "/usr/bin/docker"),
+    ):
+        try:
+            asyncio.run(run_init(session, workspace_dir="/nonexistent/path"))
+            raise AssertionError("Expected ValueError")
+        except ValueError as exc:
+            assert cwd in str(exc)
+            assert "Do not invent paths" in str(exc)
 
 
 # Feature: openscad-mcp-server, Property 15: Docker preferred over Finch

@@ -63,6 +63,8 @@ async def run_init(
     ------
     RuntimeError
         If no supported container runtime is detected.
+    ValueError
+        If workspace_dir is provided but does not exist on disk.
     """
     detection = await ContainerManager.detect()
     if detection is None:
@@ -72,10 +74,15 @@ async def run_init(
 
     if workspace_dir:
         working_dir = Path(workspace_dir).resolve()
+        if not working_dir.is_dir():
+            cwd = str(Path.cwd().resolve())
+            raise ValueError(
+                f"workspace_dir '{workspace_dir}' does not exist. "
+                f"Do not invent paths. The server's current working "
+                f"directory is: {cwd}"
+            )
     else:
         working_dir = Path.cwd().resolve()
-
-    working_dir.mkdir(parents=True, exist_ok=True)
 
     # Persist into session state
     session.container_runtime = runtime
