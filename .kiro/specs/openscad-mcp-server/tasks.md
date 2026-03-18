@@ -128,54 +128,54 @@ NOTE: After completing each task, always create a feature branch, commit, push, 
     - **Property 10: Render tool returns MCP ImageContent blocks**
     - **Validates: Requirements 7.1, 7.2**
 
-- [ ] 11. MCP tool handlers - library and feedback tools
-  - [ ] 11.1 Create `src/openscad_mcp_server/tools/library_tools.py` with four tools: `browse-library-catalog` (delegates to `LibraryService.browse_catalog`), `fetch-library` (delegates to `LibraryService.fetch_library`), `read-library-source` (delegates to `LibraryService.read_source`, marks library reviewed in session), `list-reviewed-libraries` (reads from session state)
+- [x] 11. MCP tool handlers - library and feedback tools
+  - [x] 11.1 Create `src/openscad_mcp_server/tools/library_tools.py` with four tools: `browse-library-catalog` (delegates to `LibraryService.browse_catalog`), `fetch-library` (delegates to `LibraryService.fetch_library`), `read-library-source` (delegates to `LibraryService.read_source`, marks library reviewed in session), `list-reviewed-libraries` (reads from session state)
     - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7, 9.8, 17.1, 17.4, 17.5, 17.6_
-  - [ ] 11.2 Create `src/openscad_mcp_server/tools/feedback_tools.py` with two tools: `submit-feedback` (delegates to `FeedbackService.submit`, records confidence score and disagreement flag), `list-feedback` (delegates to `FeedbackService.list_records`)
+  - [x] 11.2 Create `src/openscad_mcp_server/tools/feedback_tools.py` with two tools: `submit-feedback` (delegates to `FeedbackService.submit`, records confidence score and disagreement flag), `list-feedback` (delegates to `FeedbackService.list_records`)
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 12.10_
-  - [ ] 11.3 Create `src/openscad_mcp_server/tools/finalize.py` with `finalize` tool: delegates to `FileManager.finalize()`, returns final output directory path and file list
+  - [x] 11.3 Create `src/openscad_mcp_server/tools/finalize.py` with `finalize` tool: delegates to `FileManager.finalize()`, returns final output directory path and file list
     - _Requirements: 11.5, 11.6_
 
-- [ ] 12. Checkpoint - All tools implemented
+- [x] 12. Checkpoint - All tools implemented
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. MCP resources
-  - [ ] 13.1 Create `src/openscad_mcp_server/resources/openscad_syntax.py` with `openscad://syntax-reference` resource: returns OpenSCAD language reference covering primitives, transformations, boolean operations, module definitions, variable scoping
+- [x] 13. MCP resources
+  - [x] 13.1 Create `src/openscad_mcp_server/resources/openscad_syntax.py` with `openscad://syntax-reference` resource: returns OpenSCAD language reference covering primitives, transformations, boolean operations, module definitions, variable scoping
     - _Requirements: 2.1_
-  - [ ] 13.2 Create `src/openscad_mcp_server/resources/library_ref.py` with `openscad://library-reference/{library_name}` dynamic resource: generates reference from fetched library source including module signatures, parameter types/defaults, coordinate system conventions, usage examples
+  - [x] 13.2 Create `src/openscad_mcp_server/resources/library_ref.py` with `openscad://library-reference/{library_name}` dynamic resource: generates reference from fetched library source including module signatures, parameter types/defaults, coordinate system conventions, usage examples
     - _Requirements: 2.2, 2.3, 2.4_
-  - [ ] 13.3 Create `src/openscad_mcp_server/resources/pitfalls.py` with `openscad://pitfalls` resource: returns common pitfalls (manifold errors, z-fighting, boolean order, coordinate mismatches, missing `$fn`)
+  - [x] 13.3 Create `src/openscad_mcp_server/resources/pitfalls.py` with `openscad://pitfalls` resource: returns common pitfalls (manifold errors, z-fighting, boolean order, coordinate mismatches, missing `$fn`)
     - _Requirements: 2.5_
 
-- [ ] 14. MCP workflow prompt
-  - [ ] 14.1 Create `src/openscad_mcp_server/prompts/workflow.py` with `openscad-workflow` prompt: full step-by-step instructions covering init/settings check, library discovery/fetch/review, code generation, build, render, systematic per-angle inspection with checklist, per-angle confidence scoring, overall confidence as min of per-angle scores, iteration on low confidence, finalize, and feedback handling. Includes prohibitions on skipping angles, declaring complete below 0.5 confidence, and guessing at library APIs
+- [x] 14. MCP workflow prompt
+  - [x] 14.1 Create `src/openscad_mcp_server/prompts/workflow.py` with `openscad-workflow` prompt: full step-by-step instructions covering init/settings check, library discovery/fetch/review, code generation, build, render, systematic per-angle inspection with checklist, per-angle confidence scoring, overall confidence as min of per-angle scores, iteration on low confidence, finalize, and feedback handling. Includes prohibitions on skipping angles, declaring complete below 0.5 confidence, and guessing at library APIs
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 7.4, 7.5, 7.6, 7.7, 9.9, 10.2, 10.3, 10.4, 16.1, 16.2, 16.3, 16.4, 16.5, 16.6, 16.7, 16.8, 16.9, 17.5_
 
-- [ ] 15. MCP server wiring
-  - [ ] 15.1 Create `src/openscad_mcp_server/server.py`: instantiate `Server("openscad-mcp-server")`, create shared `SessionState`, register all 11 tools via `@app.tool()` decorators, register 3 resources via `@app.resource()`, register workflow prompt via `@app.prompt()`, implement `main()` async function running stdio transport
+- [x] 15. MCP server wiring
+  - [x] 15.1 Create `src/openscad_mcp_server/server.py`: instantiate `Server("openscad-mcp-server")`, create shared `SessionState`, register all 11 tools via `@app.tool()` decorators, register 3 resources via `@app.resource()`, register workflow prompt via `@app.prompt()`, implement `main()` async function running stdio transport
     - _Requirements: 1.1, 1.2, 1.3_
-  - [ ] 15.2 Write unit tests for server initialization verifying tool/resource/prompt registration returns expected names
+  - [x] 15.2 Write unit tests for server initialization verifying tool/resource/prompt registration returns expected names
     - _Requirements: 1.1, 1.2_
 
-- [ ] 16. Checkpoint - Server fully wired
+- [x] 16. Checkpoint - Server fully wired
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 17. Container images
-  - [ ] 17.1 Create `Dockerfile.build` based on `ubuntu:24.04`, installing `openscad` package, with entrypoint `openscad`, working directory mount at `/work`, and `OPENSCADPATH` set to `/work/libraries`
+- [x] 17. Container images
+  - [x] 17.1 Create `Dockerfile.build` based on `ubuntu:24.04`, installing `openscad` package, with entrypoint `openscad`, working directory mount at `/work`, and `OPENSCADPATH` set to `/work/libraries`
     - _Requirements: 8.1, 5.5, 9.6_
-  - [ ] 17.2 Create `Dockerfile.render` based on same base image, configured for OpenSCAD PNG export with `--camera` and `--imgsize` parameters
+  - [x] 17.2 Create `Dockerfile.render` based on same base image, configured for OpenSCAD PNG export with `--camera` and `--imgsize` parameters
     - _Requirements: 8.2_
 
-- [ ] 18. GitHub Actions CI/CD
-  - [ ] 18.1 Create `.github/workflows/auto-tag.yml`: triggers on PR merge to main, reads version from `pyproject.toml`, creates git tag `v{version}`, creates GitHub release with auto-generated notes. Skips if tag already exists. Uses `GITHUB_TOKEN`
+- [x] 18. GitHub Actions CI/CD
+  - [x] 18.1 Create `.github/workflows/auto-tag.yml`: triggers on PR merge to main, reads version from `pyproject.toml`, creates git tag `v{version}`, creates GitHub release with auto-generated notes. Skips if tag already exists. Uses `GITHUB_TOKEN`
     - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
-  - [ ] 18.2 Create `.github/workflows/publish.yml`: triggers on `v*` tag push, builds Python package, publishes to PyPI using trusted publishing (OIDC). Verifies package version matches tag. Reports errors on build or publish failure
+  - [x] 18.2 Create `.github/workflows/publish.yml`: triggers on `v*` tag push, builds Python package, publishes to PyPI using trusted publishing (OIDC). Verifies package version matches tag. Reports errors on build or publish failure
     - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5_
-  - [ ] 18.3 Write property test for version-tag matching (Property 21: Version-tag matching)
+  - [x] 18.3 Write property test for version-tag matching (Property 21: Version-tag matching)
     - **Property 21: Version-tag matching**
     - **Validates: Requirements 14.5**
 
-- [ ] 19. Final checkpoint - Full integration
+- [x] 19. Final checkpoint - Full integration
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

@@ -36,21 +36,7 @@ openscad-mcp-server
 
 The server communicates over stdio, so it's meant to be launched by an MCP client (Claude Desktop, Kiro, etc.), not run interactively.
 
-### Build the container images
-
-The server needs two container images for compiling and rendering. Build them from the included Dockerfiles:
-
-```bash
-docker build -f Dockerfile.build -t openscad-build .
-docker build -f Dockerfile.render -t openscad-render .
-```
-
-Or with Finch:
-
-```bash
-finch build -f Dockerfile.build -t openscad-build .
-finch build -f Dockerfile.render -t openscad-render .
-```
+The server uses the official [`openscad/openscad`](https://hub.docker.com/r/openscad/openscad) Docker Hub image for both STL compilation and rendering. It's pulled automatically on first use — no manual image builds needed.
 
 ## MCP client configuration
 

@@ -8,7 +8,7 @@ from pathlib import Path
 from openscad_mcp_server.services.container import ContainerError, ContainerManager
 from openscad_mcp_server.services.file_manager import FileManager
 
-BUILD_IMAGE = "openscad-mcp-build"
+BUILD_IMAGE = "openscad/openscad:latest"
 CONTAINER_WORK_DIR = "/work"
 CONTAINER_LIB_DIR = "/work/libraries"
 

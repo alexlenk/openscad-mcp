@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from hypothesis import given, settings, strategies as st
 
@@ -59,6 +60,7 @@ def test_runtime_agnostic_commands(
     # First element differs (executable), rest must be identical.
     assert docker_cmd[0] == "/usr/bin/docker"
     assert finch_cmd[0] == "/usr/local/bin/finch"
+    # After the executable, the structure (run, --rm, mounts, image, command) is identical
     assert docker_cmd[1:] == finch_cmd[1:]
 
 
@@ -105,9 +107,11 @@ def test_container_mount_correctness(
         if token == "-v":
             mount_specs.append(next(it))
 
-    # Both mounts must be present
-    assert f"{working_dir}:/work" in mount_specs
-    assert f"{library_dir}:/work/libraries" in mount_specs
+    # Both mounts must be present (paths are resolved via Path.resolve())
+    resolved_working = str(Path(working_dir).resolve())
+    resolved_library = str(Path(library_dir).resolve())
+    assert f"{resolved_working}:/work" in mount_specs
+    assert f"{resolved_library}:/work/libraries" in mount_specs
 
 
 # ---------------------------------------------------------------------------
