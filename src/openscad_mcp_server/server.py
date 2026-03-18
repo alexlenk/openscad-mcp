@@ -49,6 +49,7 @@ from openscad_mcp_server.services.file_manager import FileManager
 from openscad_mcp_server.services.library_service import LibraryService, LibraryServiceError
 from openscad_mcp_server.services.session import SessionState
 from openscad_mcp_server.tools.build_stl import run_build_stl
+from openscad_mcp_server.tools.check_syntax import run_check_syntax
 from openscad_mcp_server.tools.feedback_tools import run_list_feedback, run_submit_feedback
 from openscad_mcp_server.tools.finalize import run_finalize
 from openscad_mcp_server.tools.init_tool import run_init
@@ -58,6 +59,7 @@ from openscad_mcp_server.tools.library_tools import (
     run_list_reviewed_libraries,
     run_read_library_source,
 )
+from openscad_mcp_server.tools.measure_stl import run_measure_stl
 from openscad_mcp_server.tools.render_images import run_render_images
 from openscad_mcp_server.tools.save_code import LibraryNotReviewedError, run_save_code
 
@@ -120,7 +122,34 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="render-images",
-            description="Render an STL from 8 camera angles, returning base64 PNG images",
+            description="Render a model from camera angles, returning base64 PNG images. Accepts .stl or .scad files. Renders all 8 angles by default, or a subset if angles are specified.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "stl_file": {"type": "string", "description": "Filename of the .stl or .scad file in the working area"},
+                    "angles": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of angle labels to render (e.g. ['top', 'front']). Omit for all 8 angles. Valid: front, back, left, right, top, bottom, front-right-top-iso, back-left-top-iso",
+                    },
+                },
+                "required": ["stl_file"],
+            },
+        ),
+        Tool(
+            name="check-syntax",
+            description="Fast syntax validation of an OpenSCAD file without full CGAL geometry computation",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "scad_file": {"type": "string", "description": "Filename of the .scad file in the working area"},
+                },
+                "required": ["scad_file"],
+            },
+        ),
+        Tool(
+            name="measure-stl",
+            description="Analyze an STL file and return dimensional metadata (bounding box, volume, surface area, manifold check) without rendering",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -230,6 +259,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
             stl_file=arguments["stl_file"],
             container_manager=cm,
             file_manager=fm,
+            angles=arguments.get("angles"),
         )
         blocks: list[TextContent | ImageContent] = [
             TextContent(type="text", text=result.text_content),
@@ -242,6 +272,27 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
                 text=json.dumps({"failed_angles": [asdict(f) for f in result.failures]}),
             ))
         return blocks
+
+    elif name == "check-syntax":
+        fm = _get_file_manager()
+        cm = _get_container_manager()
+        result = await run_check_syntax(
+            scad_file=arguments["scad_file"],
+            container_manager=cm,
+            file_manager=fm,
+        )
+        return [TextContent(type="text", text=json.dumps(asdict(result)))]
+
+    elif name == "measure-stl":
+        fm = _get_file_manager()
+        try:
+            result = run_measure_stl(
+                stl_file=arguments["stl_file"],
+                file_manager=fm,
+            )
+        except FileNotFoundError as exc:
+            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
+        return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "browse-library-catalog":
         fm = _get_file_manager()

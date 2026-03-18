@@ -43,16 +43,29 @@ def _successful_container_run(file_manager: FileManager):
     """Return an AsyncMock for ContainerManager.run that writes fake PNGs."""
 
     async def _mock_run(image, command, mounts=None, timeout=300):
-        # Extract the output filename from the command to figure out which angle
-        for i, arg in enumerate(command):
-            if arg == "-o" and i + 1 < len(command):
-                container_out = command[i + 1]
-                # container path like /work/renders/front.png -> local renders dir
+        # Extract the output filename from the bash -c command string
+        # Command is ["bash", "-c", "... -o /work/renders/front.png ..."]
+        if len(command) >= 3 and command[0] == "bash" and command[1] == "-c":
+            cmd_str = command[2]
+            # Find "-o <path>" in the command string
+            import re
+            m = re.search(r"-o\s+(\S+)", cmd_str)
+            if m:
+                container_out = m.group(1)
                 png_name = Path(container_out).name
                 local_path = file_manager.renders_dir / png_name
                 local_path.parent.mkdir(parents=True, exist_ok=True)
                 local_path.write_bytes(_MINIMAL_PNG)
-                break
+        else:
+            # Fallback for non-bash-wrapped commands
+            for i, arg in enumerate(command):
+                if arg == "-o" and i + 1 < len(command):
+                    container_out = command[i + 1]
+                    png_name = Path(container_out).name
+                    local_path = file_manager.renders_dir / png_name
+                    local_path.parent.mkdir(parents=True, exist_ok=True)
+                    local_path.write_bytes(_MINIMAL_PNG)
+                    break
         return ContainerResult(exit_code=0, stdout="", stderr="")
 
     return _mock_run
@@ -127,25 +140,30 @@ def test_render_command_specifies_png_1024(
     rot: tuple[float, float, float],
 ) -> None:
     """For any camera angle, the render command must include --imgsize=1024,1024
-    and produce PNG output (via -o .png)."""
+    and produce PNG output (via -o .png), wrapped in xvfb-run."""
     angle = CameraAngle(label="test", position=pos, rotation=rot)
     cmd = build_render_command(angle, "/work/model.scad", "/work/renders/test.png")
 
-    assert "--imgsize=1024,1024" in cmd
-    # Output file ends with .png
-    o_idx = cmd.index("-o")
-    assert cmd[o_idx + 1].endswith(".png")
+    # Command is ["bash", "-c", "..."]
+    assert cmd[0] == "bash"
+    assert cmd[1] == "-c"
+    cmd_str = cmd[2]
+    assert "--imgsize=1024,1024" in cmd_str
+    assert "-o /work/renders/test.png" in cmd_str
+    assert "xvfb-run" in cmd_str
 
 
 # Feature: openscad-mcp-server, Property 8: All predefined angles produce correct commands
 def test_all_predefined_angles_specify_png_1024() -> None:
     """Every predefined CAMERA_ANGLES entry should produce a command with
-    --imgsize=1024,1024 and PNG output."""
+    --imgsize=1024,1024, PNG output, and xvfb-run wrapper."""
     for angle in CAMERA_ANGLES:
         cmd = build_render_command(angle, "/work/m.scad", f"/work/renders/{angle.label}.png")
-        assert "--imgsize=1024,1024" in cmd
-        o_idx = cmd.index("-o")
-        assert cmd[o_idx + 1].endswith(".png")
+        assert cmd[0] == "bash"
+        cmd_str = cmd[2]
+        assert "--imgsize=1024,1024" in cmd_str
+        assert f"-o /work/renders/{angle.label}.png" in cmd_str
+        assert "xvfb-run" in cmd_str
 
 
 # ---------------------------------------------------------------------------
@@ -276,13 +294,22 @@ def test_render_image_data_matches_written_png(
     (fm.working_dir / "model.stl").write_bytes(b"solid dummy")
 
     async def _write_custom_png(image, command, mounts=None, timeout=300):
-        for i, arg in enumerate(command):
-            if arg == "-o" and i + 1 < len(command):
-                png_name = Path(command[i + 1]).name
+        if len(command) >= 3 and command[0] == "bash" and command[1] == "-c":
+            import re
+            m = re.search(r"-o\s+(\S+)", command[2])
+            if m:
+                png_name = Path(m.group(1)).name
                 local_path = fm.renders_dir / png_name
                 local_path.parent.mkdir(parents=True, exist_ok=True)
                 local_path.write_bytes(png_payload)
-                break
+        else:
+            for i, arg in enumerate(command):
+                if arg == "-o" and i + 1 < len(command):
+                    png_name = Path(command[i + 1]).name
+                    local_path = fm.renders_dir / png_name
+                    local_path.parent.mkdir(parents=True, exist_ok=True)
+                    local_path.write_bytes(png_payload)
+                    break
         return ContainerResult(exit_code=0, stdout="", stderr="")
 
     mgr = ContainerManager("docker", "docker")
