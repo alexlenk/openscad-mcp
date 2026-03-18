@@ -95,8 +95,17 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="init",
-            description="Detect container runtime and configure working directory",
-            inputSchema={"type": "object", "properties": {}, "required": []},
+            description="Detect container runtime and configure working directory. Pass workspace_dir to store files in the user's project directory.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "workspace_dir": {
+                        "type": "string",
+                        "description": "The user's project directory. All files (code, STL, renders, libraries) will be stored here. Pass the workspace root from your IDE.",
+                    },
+                },
+                "required": ["workspace_dir"],
+            },
         ),
         Tool(
             name="save-code",
@@ -240,7 +249,7 @@ async def list_tools() -> list[Tool]:
 @app.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageContent]:
     if name == "init":
-        result = await run_init(session)
+        result = await run_init(session, workspace_dir=arguments.get("workspace_dir"))
         return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "save-code":

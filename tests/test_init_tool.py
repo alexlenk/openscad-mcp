@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import tempfile
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -33,16 +35,16 @@ _executables = st.sampled_from(["/usr/bin/docker", "/usr/local/bin/finch", "/opt
 @settings(max_examples=50)
 def test_init_detects_available_runtime(runtime: str, executable: str) -> None:
     """When exactly one runtime is available, init should detect and return it,
-    persist it in session state, and produce valid persistence content.
-    Working directory should be the current working directory."""
+    persist it in session state, and produce valid persistence content."""
     session = SessionState()
 
-    with patch(
-        "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
-        new_callable=AsyncMock,
-        return_value=(runtime, executable),
-    ):
-        result: InitResult = asyncio.run(run_init(session))
+    with tempfile.TemporaryDirectory() as td:
+        with patch(
+            "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+            new_callable=AsyncMock,
+            return_value=(runtime, executable),
+        ):
+            result: InitResult = asyncio.run(run_init(session, workspace_dir=td))
 
     assert result.runtime == runtime
     assert result.executable_path == executable
@@ -56,35 +58,29 @@ def test_init_detects_available_runtime(runtime: str, executable: str) -> None:
     assert session.working_dir is not None
 
 
-# Feature: openscad-mcp-server, Property 15: Working dir is cwd
+# Feature: openscad-mcp-server, Property 15: workspace_dir is used
 @given(runtime=_runtimes, executable=_executables)
 @settings(max_examples=10)
-def test_init_uses_cwd_as_working_dir(runtime: str, executable: str) -> None:
-    """Init should use the current working directory (the user's project dir),
-    not a temp directory."""
-    import os
+def test_init_uses_provided_workspace_dir(runtime: str, executable: str) -> None:
+    """Init should use the provided workspace_dir, not cwd or a temp dir."""
     session = SessionState()
 
-    with patch(
-        "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
-        new_callable=AsyncMock,
-        return_value=(runtime, executable),
-    ):
-        result: InitResult = asyncio.run(run_init(session))
+    with tempfile.TemporaryDirectory() as td:
+        with patch(
+            "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+            new_callable=AsyncMock,
+            return_value=(runtime, executable),
+        ):
+            result: InitResult = asyncio.run(run_init(session, workspace_dir=td))
 
-    from pathlib import Path
-    expected = str(Path.cwd().resolve())
+    expected = str(Path(td).resolve())
     assert result.working_dir == expected
     assert str(session.working_dir) == expected
 
 
-# Feature: openscad-mcp-server, Property 15: Docker preferred over Finch
-def test_init_prefers_docker_when_both_available() -> None:
-    """When both Docker and Finch are available, Docker should be preferred.
-
-    ContainerManager.detect() already implements this preference (probes Docker
-    first), so we verify the init tool propagates the result correctly.
-    """
+# Feature: openscad-mcp-server, Property 15: fallback to cwd
+def test_init_falls_back_to_cwd_when_no_workspace_dir() -> None:
+    """When workspace_dir is not provided, init should fall back to cwd."""
     session = SessionState()
 
     with patch(
@@ -93,6 +89,43 @@ def test_init_prefers_docker_when_both_available() -> None:
         return_value=("docker", "/usr/bin/docker"),
     ):
         result = asyncio.run(run_init(session))
+
+    expected = str(Path.cwd().resolve())
+    assert result.working_dir == expected
+
+
+# Feature: openscad-mcp-server, Property 15: workspace_dir creates dirs
+def test_init_creates_workspace_dir_if_missing() -> None:
+    """Init should create the workspace directory if it doesn't exist."""
+    session = SessionState()
+
+    with tempfile.TemporaryDirectory() as td:
+        new_dir = Path(td) / "my-project" / "subdir"
+        assert not new_dir.exists()
+
+        with patch(
+            "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+            new_callable=AsyncMock,
+            return_value=("docker", "/usr/bin/docker"),
+        ):
+            result = asyncio.run(run_init(session, workspace_dir=str(new_dir)))
+
+        assert new_dir.exists()
+        assert result.working_dir == str(new_dir.resolve())
+
+
+# Feature: openscad-mcp-server, Property 15: Docker preferred over Finch
+def test_init_prefers_docker_when_both_available() -> None:
+    """When both Docker and Finch are available, Docker should be preferred."""
+    session = SessionState()
+
+    with tempfile.TemporaryDirectory() as td:
+        with patch(
+            "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+            new_callable=AsyncMock,
+            return_value=("docker", "/usr/bin/docker"),
+        ):
+            result = asyncio.run(run_init(session, workspace_dir=td))
 
     assert result.runtime == "docker"
 
@@ -109,7 +142,7 @@ def test_init_raises_when_no_runtime() -> None:
         return_value=None,
     ):
         with pytest.raises(RuntimeError, match="No supported container runtime"):
-            asyncio.run(run_init(session))
+            asyncio.run(run_init(session, workspace_dir="/tmp/test"))
 
     # Session state should remain unset
     assert session.container_runtime is None

@@ -34,13 +34,21 @@ SUPPORTED_RUNTIMES_MSG = (
 )
 
 
-async def run_init(session: SessionState) -> InitResult:
-    """Detect container runtime and use the current working directory.
+async def run_init(
+    session: SessionState,
+    workspace_dir: str | None = None,
+) -> InitResult:
+    """Detect container runtime and configure the working directory.
 
-    The working directory is the process's cwd — which is the user's
-    project directory when launched by an MCP client like Kiro. All files
-    (code, STL, renders, libraries) live here so they're visible in the
-    IDE and tracked by git.
+    Parameters
+    ----------
+    session
+        The current session state.
+    workspace_dir
+        The user's project directory. When provided, all files (code, STL,
+        renders, libraries) are stored here so they're visible in the IDE
+        and tracked by git. When omitted, falls back to the process's
+        current working directory.
 
     Raises
     ------
@@ -53,7 +61,12 @@ async def run_init(session: SessionState) -> InitResult:
 
     runtime, executable = detection
 
-    working_dir = Path.cwd().resolve()
+    if workspace_dir:
+        working_dir = Path(workspace_dir).resolve()
+    else:
+        working_dir = Path.cwd().resolve()
+
+    working_dir.mkdir(parents=True, exist_ok=True)
 
     # Persist into session state
     session.container_runtime = runtime

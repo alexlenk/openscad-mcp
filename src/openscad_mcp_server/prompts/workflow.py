@@ -30,9 +30,11 @@ Do not skip steps or reorder them.
 server configuration (container runtime, executable path, working directory).
 2. If persisted settings are found, use them directly and skip to Step 2.
 3. If no persisted settings are found, invoke the `init` tool.
+   - Pass the user's project directory as `workspace_dir` so all files \
+(code, STL, renders, libraries) are stored there and visible in the IDE.
    - The init tool detects whether Docker or Finch is available, runs a test \
 container, and returns the detected runtime, executable path, working \
-directory (the user's current project directory), and formatted persistence content.
+directory, and formatted persistence content.
 4. Persist the returned settings using your native memory mechanism \
 (e.g., a steering file for Kiro, CLAUDE.md for Claude Code, or equivalent) \
 so future sessions skip this step.
