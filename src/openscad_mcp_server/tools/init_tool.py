@@ -17,6 +17,7 @@ class InitResult:
     executable_path: str
     working_dir: str
     persistence_content: str
+    next_step: str
 
 
 PERSISTENCE_TEMPLATE = """\
@@ -31,6 +32,14 @@ SUPPORTED_RUNTIMES_MSG = (
     "Please install one of the following:\n"
     "  - Docker: https://docs.docker.com/get-docker/\n"
     "  - Finch: https://runfinch.com/\n"
+)
+
+
+NEXT_STEP_GUIDANCE = (
+    "IMPORTANT: Before writing any code, call browse-library-catalog to check "
+    "for existing libraries. For enclosures use YAPP_Box, for mechanical parts "
+    "use BOSL2. Then fetch-library + read-library-source to understand the API. "
+    "Only then write code with save-code using library modules where possible."
 )
 
 
@@ -84,4 +93,5 @@ async def run_init(
         executable_path=executable,
         working_dir=str(working_dir),
         persistence_content=persistence_content,
+        next_step=NEXT_STEP_GUIDANCE,
     )

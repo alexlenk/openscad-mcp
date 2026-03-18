@@ -95,13 +95,13 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="init",
-            description="Detect container runtime and configure working directory. Pass workspace_dir to store files in the user's project directory.",
+            description="Detect container runtime and configure working directory. IMPORTANT: After init, call browse-library-catalog before writing any code.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "workspace_dir": {
                         "type": "string",
-                        "description": "The user's project directory. All files (code, STL, renders, libraries) will be stored here. Pass the workspace root from your IDE.",
+                        "description": "The user's current working directory (pwd). Do NOT infer from open editor files — use the actual workspace root directory.",
                     },
                 },
                 "required": ["workspace_dir"],
@@ -109,7 +109,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="save-code",
-            description="Save OpenSCAD code to the working area",
+            description="Save OpenSCAD code to the working area. Tip: Before writing custom modules, call browse-library-catalog — libraries like BOSL2 (mechanical primitives) and YAPP_Box (parametric enclosures) produce more robust designs with less code.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -170,7 +170,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="browse-library-catalog",
-            description="Fetch the official OpenSCAD library catalog from openscad.org",
+            description="Fetch the official OpenSCAD library catalog from openscad.org. CALL THIS FIRST before writing any code — libraries like YAPP_Box (enclosures) and BOSL2 (mechanical parts) save significant effort.",
             inputSchema={
                 "type": "object",
                 "properties": {
