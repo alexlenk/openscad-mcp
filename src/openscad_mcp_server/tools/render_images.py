@@ -39,27 +39,27 @@ class RenderResult:
     failures: list[RenderFailure] = field(default_factory=list)
 
 
-def build_render_command(angle: CameraAngle, input_file: str, output_png: str) -> list[str]:
-    """Build the OpenSCAD CLI command for rendering a single angle.
+def build_render_command(angle: CameraAngle, input_file: str, output_png: str, timeout: int = 45) -> list[str]:
+    """Build the container command for rendering a single angle.
 
-    ``input_file`` may be a ``.scad`` file (possibly a wrapper that imports an STL).
-    Uses ``--autocenter --viewall`` so the model is always framed correctly.
+    Wraps OpenSCAD in ``xvfb-run`` because PNG export requires OpenGL/X11,
+    which isn't available in headless containers without a virtual framebuffer.
     """
     rot = angle.rotation
-    # OpenSCAD --camera with translation 0,0,0 + rotation + distance 0 (viewall handles framing)
     camera_arg = f"0,0,0,{rot[0]},{rot[1]},{rot[2]},0"
-    return [
-        "openscad",
-        f"--camera={camera_arg}",
-        f"--imgsize={IMG_SIZE}",
-        "--autocenter",
-        "--viewall",
-        "--render",
-        "--projection=p",
-        "--colorscheme", "Cornfield",
-        "-o", output_png,
-        input_file,
-    ]
+    openscad_cmd = (
+        f"timeout {timeout} xvfb-run --auto-servernum "
+        f'--server-args="-screen 0 1024x1024x24" '
+        f"openscad "
+        f"--camera={camera_arg} "
+        f"--imgsize={IMG_SIZE} "
+        f"--autocenter --viewall --render "
+        f"--projection=p "
+        f"--colorscheme Cornfield "
+        f"-o {output_png} "
+        f"{input_file}"
+    )
+    return ["bash", "-c", openscad_cmd]
 
 
 SCAD_WRAPPER_TEMPLATE = 'import("{stl_file}");\n'
@@ -86,19 +86,22 @@ async def run_render_images(
     container_manager: ContainerManager,
     file_manager: FileManager,
     timeout: int = 300,
+    angles: list[str] | None = None,
 ) -> RenderResult:
-    """Render an STL from 8 camera angles and return MCP-compatible content blocks.
+    """Render an STL from camera angles and return MCP-compatible content blocks.
 
     Parameters
     ----------
     stl_file:
-        Filename (relative to the working area) of the ``.stl`` file.
+        Filename (relative to the working area) of the ``.stl`` or ``.scad`` file.
     container_manager:
         Configured container manager for the current runtime.
     file_manager:
         File manager providing working-area and library paths.
     timeout:
         Maximum seconds per render container invocation.
+    angles:
+        Optional list of angle labels to render. If ``None``, renders all 8.
 
     Returns
     -------
@@ -115,10 +118,24 @@ async def run_render_images(
     stl_container_path = _ensure_scad_input(stl_file, file_manager)
     renders_container_dir = f"{CONTAINER_WORK_DIR}/renders"
 
+    # Filter angles if a subset was requested
+    if angles is not None:
+        requested = {a.lower() for a in angles}
+        selected_angles = [a for a in CAMERA_ANGLES if a.label.lower() in requested]
+        unknown = requested - {a.label.lower() for a in selected_angles}
+        if unknown:
+            valid = [a.label for a in CAMERA_ANGLES]
+            return RenderResult(
+                text_content=json.dumps({"error": f"Unknown angles: {sorted(unknown)}. Valid: {valid}"}),
+                failures=[RenderFailure(label=u, error="Unknown angle label") for u in sorted(unknown)],
+            )
+    else:
+        selected_angles = list(CAMERA_ANGLES)
+
     image_contents: list[tuple[str, str]] = []
     failures: list[RenderFailure] = []
 
-    for angle in CAMERA_ANGLES:
+    for angle in selected_angles:
         output_png = f"{renders_container_dir}/{angle.label}.png"
         command = build_render_command(angle, stl_container_path, output_png)
 
@@ -160,7 +177,7 @@ async def run_render_images(
                 "camera_position": list(angle.position),
                 "camera_rotation": list(angle.rotation),
             }
-            for angle in CAMERA_ANGLES
+            for angle in selected_angles
         ],
     }
     if failures:

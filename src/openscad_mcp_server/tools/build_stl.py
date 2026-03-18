@@ -7,6 +7,7 @@ from pathlib import Path
 
 from openscad_mcp_server.services.container import ContainerError, ContainerManager
 from openscad_mcp_server.services.file_manager import FileManager
+from openscad_mcp_server.services.stl_parser import parse_stl
 
 BUILD_IMAGE = "openscad/openscad:latest"
 CONTAINER_WORK_DIR = "/work"
@@ -15,9 +16,17 @@ CONTAINER_LIB_DIR = "/work/libraries"
 
 @dataclass
 class BuildStlResult:
-    """Successful build result."""
+    """Successful build result with geometry metadata."""
 
     stl_path: str
+    file_size_bytes: int = 0
+    facet_count: int = 0
+    vertex_count: int = 0
+    bounding_box: dict | None = None
+    dimensions: dict | None = None
+    volume_cm3: float = 0.0
+    surface_area_cm2: float = 0.0
+    is_manifold: bool = True
 
 
 @dataclass
@@ -83,4 +92,27 @@ async def run_build_stl(
         )
 
     stl_path = file_manager.working_dir / stl_filename
-    return BuildStlResult(stl_path=str(stl_path.resolve()))
+    
+    # Extract geometry metadata from the STL
+    meta = parse_stl(stl_path)
+    bb = meta.bounding_box
+    dims = bb.dimensions
+
+    return BuildStlResult(
+        stl_path=str(stl_path.resolve()),
+        file_size_bytes=meta.file_size_bytes,
+        facet_count=meta.facet_count,
+        vertex_count=meta.vertex_count,
+        bounding_box={
+            "min": [round(bb.min_x, 3), round(bb.min_y, 3), round(bb.min_z, 3)],
+            "max": [round(bb.max_x, 3), round(bb.max_y, 3), round(bb.max_z, 3)],
+        },
+        dimensions={
+            "x": round(dims[0], 3),
+            "y": round(dims[1], 3),
+            "z": round(dims[2], 3),
+        },
+        volume_cm3=meta.volume_cm3,
+        surface_area_cm2=meta.surface_area_cm2,
+        is_manifold=meta.is_manifold,
+    )

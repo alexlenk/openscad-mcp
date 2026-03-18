@@ -18,6 +18,8 @@ EXPECTED_TOOLS = sorted([
     "save-code",
     "build-stl",
     "render-images",
+    "check-syntax",
+    "measure-stl",
     "browse-library-catalog",
     "fetch-library",
     "read-library-source",
@@ -38,7 +40,7 @@ async def test_list_tools_returns_all_11():
     tools = await list_tools()
     names = sorted(t.name for t in tools)
     assert names == EXPECTED_TOOLS
-    assert len(tools) == 11
+    assert len(tools) == 13
 
 
 @pytest.mark.asyncio
