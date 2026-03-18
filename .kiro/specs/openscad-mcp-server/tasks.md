@@ -4,6 +4,8 @@
 
 Incremental implementation of the OpenSCAD MCP server in Python, building from core data models and services up through tool handlers, resources, prompts, container images, packaging, and CI/CD. Each task builds on previous work so there is no orphaned code.
 
+NOTE: Always merge the feature branch after done developing a task
+
 ## Tasks
 
 - [x] 1. Project scaffolding and package configuration
@@ -80,16 +82,16 @@ Incremental implementation of the OpenSCAD MCP server in Python, building from c
     - **Property 23: Read-library-source returns source and summary**
     - **Validates: Requirements 2.2, 2.4, 17.1, 17.4**
 
-- [ ] 7. Feedback service
-  - [ ] 7.1 Create `src/openscad_mcp_server/services/feedback_service.py` with `FeedbackService` class: `submit(critique, root_cause, working_area, confidence_score)` creating timestamped feedback record with artifact copies and index update, `list_records()` returning all feedback summaries. Feedback index stored as `feedback-index.json`
+- [x] 7. Feedback service
+  - [x] 7.1 Create `src/openscad_mcp_server/services/feedback_service.py` with `FeedbackService` class: `submit(critique, root_cause, working_area, confidence_score)` creating timestamped feedback record with artifact copies and index update, `list_records()` returning all feedback summaries. Feedback index stored as `feedback-index.json`
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.7, 12.8, 12.9, 12.10_
-  - [ ] 7.2 Write property test for feedback record completeness (Property 18: Feedback record completeness)
+  - [x] 7.2 Write property test for feedback record completeness (Property 18: Feedback record completeness)
     - **Property 18: Feedback record completeness**
     - **Validates: Requirements 12.2, 12.3, 12.4, 12.5, 12.8**
-  - [ ] 7.3 Write property test for feedback index round trip (Property 19: Feedback index round trip)
+  - [x] 7.3 Write property test for feedback index round trip (Property 19: Feedback index round trip)
     - **Property 19: Feedback index round trip**
     - **Validates: Requirements 12.6, 12.7, 12.10**
-  - [ ] 7.4 Write property test for confidence disagreement flag (Property 20: Confidence disagreement flag logic)
+  - [x] 7.4 Write property test for confidence disagreement flag (Property 20: Confidence disagreement flag logic)
     - **Property 20: Confidence disagreement flag logic**
     - **Validates: Requirements 12.9**
 
