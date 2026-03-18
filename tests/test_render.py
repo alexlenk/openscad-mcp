@@ -127,25 +127,25 @@ def test_render_command_specifies_png_1024(
     rot: tuple[float, float, float],
 ) -> None:
     """For any camera angle, the render command must include --imgsize=1024,1024
-    and specify PNG output format."""
+    and produce PNG output (via -o .png)."""
     angle = CameraAngle(label="test", position=pos, rotation=rot)
-    cmd = build_render_command(angle, "/work/model.stl", "/work/renders/test.png")
+    cmd = build_render_command(angle, "/work/model.scad", "/work/renders/test.png")
 
     assert "--imgsize=1024,1024" in cmd
-    assert "--export-format" in cmd
-    fmt_idx = cmd.index("--export-format")
-    assert cmd[fmt_idx + 1] == "png"
+    # Output file ends with .png
+    o_idx = cmd.index("-o")
+    assert cmd[o_idx + 1].endswith(".png")
 
 
 # Feature: openscad-mcp-server, Property 8: All predefined angles produce correct commands
 def test_all_predefined_angles_specify_png_1024() -> None:
     """Every predefined CAMERA_ANGLES entry should produce a command with
-    --imgsize=1024,1024 and PNG format."""
+    --imgsize=1024,1024 and PNG output."""
     for angle in CAMERA_ANGLES:
-        cmd = build_render_command(angle, "/work/m.stl", f"/work/renders/{angle.label}.png")
+        cmd = build_render_command(angle, "/work/m.scad", f"/work/renders/{angle.label}.png")
         assert "--imgsize=1024,1024" in cmd
-        fmt_idx = cmd.index("--export-format")
-        assert cmd[fmt_idx + 1] == "png"
+        o_idx = cmd.index("-o")
+        assert cmd[o_idx + 1].endswith(".png")
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,7 @@ from openscad_mcp_server.models import CAMERA_ANGLES, CameraAngle
 from openscad_mcp_server.services.container import ContainerError, ContainerManager
 from openscad_mcp_server.services.file_manager import FileManager
 
-RENDER_IMAGE = "openscad-mcp-render"
+RENDER_IMAGE = "openscad/openscad:latest"
 CONTAINER_WORK_DIR = "/work"
 CONTAINER_LIB_DIR = "/work/libraries"
 IMG_SIZE = "1024,1024"
@@ -39,19 +39,46 @@ class RenderResult:
     failures: list[RenderFailure] = field(default_factory=list)
 
 
-def build_render_command(angle: CameraAngle, stl_file: str, output_png: str) -> list[str]:
-    """Build the OpenSCAD CLI command for rendering a single angle."""
-    pos = angle.position
+def build_render_command(angle: CameraAngle, input_file: str, output_png: str) -> list[str]:
+    """Build the OpenSCAD CLI command for rendering a single angle.
+
+    ``input_file`` may be a ``.scad`` file (possibly a wrapper that imports an STL).
+    Uses ``--autocenter --viewall`` so the model is always framed correctly.
+    """
     rot = angle.rotation
-    camera_arg = f"{pos[0]},{pos[1]},{pos[2]},{rot[0]},{rot[1]},{rot[2]},100"
+    # OpenSCAD --camera with translation 0,0,0 + rotation + distance 0 (viewall handles framing)
+    camera_arg = f"0,0,0,{rot[0]},{rot[1]},{rot[2]},0"
     return [
         "openscad",
         f"--camera={camera_arg}",
         f"--imgsize={IMG_SIZE}",
-        "--export-format", "png",
+        "--autocenter",
+        "--viewall",
+        "--render",
+        "--projection=p",
+        "--colorscheme", "Cornfield",
         "-o", output_png,
-        stl_file,
+        input_file,
     ]
+
+
+SCAD_WRAPPER_TEMPLATE = 'import("{stl_file}");\n'
+
+
+def _ensure_scad_input(stl_file: str, file_manager: FileManager) -> str:
+    """If the input is an STL, create a wrapper .scad file and return its container path.
+
+    Returns the container path to use as the OpenSCAD input file.
+    """
+    stl_name = Path(stl_file).name
+    if not stl_name.lower().endswith(".stl"):
+        # Already a .scad file, use directly
+        return f"{CONTAINER_WORK_DIR}/{stl_name}"
+
+    wrapper_name = "_render_wrapper.scad"
+    wrapper_local = file_manager.working_dir / wrapper_name
+    wrapper_local.write_text(SCAD_WRAPPER_TEMPLATE.format(stl_file=stl_name))
+    return f"{CONTAINER_WORK_DIR}/{wrapper_name}"
 
 
 async def run_render_images(
@@ -85,7 +112,7 @@ async def run_render_images(
     if file_manager.libraries_dir.exists():
         mounts[str(file_manager.libraries_dir)] = CONTAINER_LIB_DIR
 
-    stl_container_path = f"{CONTAINER_WORK_DIR}/{Path(stl_file).name}"
+    stl_container_path = _ensure_scad_input(stl_file, file_manager)
     renders_container_dir = f"{CONTAINER_WORK_DIR}/renders"
 
     image_contents: list[tuple[str, str]] = []

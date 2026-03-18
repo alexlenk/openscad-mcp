@@ -52,7 +52,7 @@ async def run_init(session: SessionState) -> InitResult:
 
     runtime, executable = detection
 
-    working_dir = Path(tempfile.mkdtemp(prefix="openscad-mcp-"))
+    working_dir = Path(tempfile.mkdtemp(prefix="openscad-mcp-")).resolve()
 
     # Persist into session state
     session.container_runtime = runtime

@@ -42,7 +42,8 @@ class ContainerManager:
         """
         cmd: list[str] = [self.executable, "run", "--rm"]
         for host_path, container_path in (mounts or {}).items():
-            cmd += ["-v", f"{host_path}:{container_path}"]
+            resolved = str(Path(host_path).resolve())
+            cmd += ["-v", f"{resolved}:{container_path}"]
         cmd.append(image)
         cmd.extend(command)
         return cmd
