@@ -63,11 +63,9 @@ Before writing any code, always check for existing library solutions. \
 Libraries produce more reliable results than hand-written code and save \
 significant iteration time.
 
-1. Invoke the `browse-library-catalog` tool to fetch the current list of \
-available OpenSCAD libraries from the official catalog.
-2. Review the catalog entries — each contains a library name, description, \
-source repository URL, and documentation URL.
-3. Use the following table to identify relevant libraries based on the task:
+1. Check the OpenSCAD library catalog at \
+https://openscad.org/libraries.html to find relevant libraries.
+2. Use the following table to identify relevant libraries based on the task:
 
 | Keywords in user request | Recommended Library | Why |
 |---|---|---|
@@ -79,10 +77,10 @@ source repository URL, and documentation URL.
 | rounded, fillet, chamfer, bezier | BOSL2 | Advanced geometry primitives |
 | organic, sculpted, curved surface | BOSL2 | Bezier surfaces, rounded primitives |
 
-4. Select libraries that match the task. Prefer library modules over \
+3. Select libraries that match the task. Prefer library modules over \
 hand-written equivalents — a library's parametric enclosure is more \
 reliable than a custom one.
-5. If no external libraries are needed, skip to Step 5.
+4. If no external libraries are needed, skip to Step 5.
 
 ### PROHIBITION: No Reinventing the Wheel
 
@@ -92,42 +90,32 @@ Before writing any custom module, verify:
 - If a library covers 80% of the need, use it and customize the rest — \
 do not rewrite the 80% from scratch.
 
-**Tools used:** `browse-library-catalog`
-
 ---
 
-## Step 4: Library Fetch and Mandatory Source Review
+## Step 4: Library Download and Source Review
 
 For each library you intend to use:
 
-1. Invoke the `fetch-library` tool with the library name and source URL \
-from the catalog. This downloads the library to the working directory.
-2. Invoke the `read-library-source` tool with the library name. This \
-returns a compact overview: file listing, module signatures with parameter \
-names and defaults, coordinate system, and unit conventions. It does NOT \
-return full source code (to avoid filling the context window).
-3. Study the returned signatures carefully. Record:
+1. Download the library from its GitHub repository into the working \
+directory. Use git clone or download the archive.
+2. Read the library's main .scad files to understand the available \
+modules, their parameter signatures, coordinate system, and unit \
+conventions.
+3. Study the module signatures carefully. Record:
    - Every module name and its full parameter signature
    - The coordinate system orientation (e.g., right-hand, Z-up)
    - The unit conventions (e.g., millimeters)
    - Any special parameter conventions or ordering requirements
-4. If you need to see the full implementation of a specific module, invoke \
-the `read-library-file` tool with the library name, file path, and \
-optionally a module name. This returns only the requested source — not \
-the entire library.
+4. Check the library's README or documentation for usage examples.
 
 ### PROHIBITION: No Guessing at Library APIs
 
 - You MUST NOT write any OpenSCAD code that calls a library module unless \
-you have first invoked `read-library-source` for that library in this session.
+you have first read the library source to understand its API.
 - You MUST NOT guess at module names, parameter names, parameter order, \
 default values, or coordinate conventions.
-- If you are unsure about any aspect of a library's API, use \
-`read-library-file` to inspect the specific module source.
-- The `save-code` tool will reject code that references libraries whose \
-source has not been reviewed in the current session.
-
-**Tools used:** `fetch-library`, `read-library-source`, `read-library-file`
+- If you are unsure about any aspect of a library's API, read the \
+specific module source file.
 
 ---
 
@@ -137,29 +125,33 @@ source has not been reviewed in the current session.
 2. Use the correct `include` or `use` statements for any libraries.
 3. Apply the coordinate system and parameter conventions you recorded \
 in Step 4.
-4. Invoke the `save-code` tool with the code and a descriptive filename.
-   - The filename will automatically get a `.scad` extension if missing.
-   - The tool verifies that all referenced libraries have been reviewed.
-5. If the save is rejected due to unreviewed libraries, go back to Step 4 \
-and review the missing libraries before retrying.
-
-**Tools used:** `save-code`
+4. Save the code as a `.scad` file in the working directory.
+5. When using libraries via `include`, prefer literal values over \
+computed variables in array definitions. OpenSCAD's variable scoping \
+with `include` can cause unexpected `undef` values.
 
 ---
 
 ## Step 6: Build STL
 
 1. Invoke the `build-stl` tool with the saved `.scad` file path.
-2. If the build succeeds, note the returned STL file path and proceed \
-to Step 7.
+2. If the build succeeds:
+   a. Call `measure-stl` on the output and check `is_manifold`.
+   b. If `is_manifold` is false, STOP. Do NOT present a non-manifold STL \
+to the user. Try to fix it: simplify boolean operations, remove hooks \
+one at a time to isolate the cause, increase `$fn`, or restructure the \
+geometry. Re-build after each fix attempt.
+   c. If `is_manifold` is true, proceed to Step 7.
 3. If the build fails, read the full error output carefully:
    - Identify the error type (syntax error, undefined module, manifold \
 error, etc.).
    - Fix the OpenSCAD code based on the error details.
-   - Re-save the code with `save-code` and retry the build.
+   - Re-save the code and retry the build.
    - Repeat until the build succeeds.
+4. After any failure (build error, non-manifold), attempt at least one \
+fix before reporting to the user. Only report after 3 failed attempts.
 
-**Tools used:** `build-stl`
+**Tools used:** `build-stl`, `measure-stl`
 
 ---
 
@@ -259,7 +251,7 @@ proportionally.
 
 ### 8d: Handle Low Per-Angle Confidence
 
-If any per-angle confidence score is below 0.5:
+If any per-angle confidence score is below 0.8:
 
 1. STOP and re-examine that angle carefully.
 2. Explicitly question your initial assessment — could you be \
@@ -287,7 +279,7 @@ front-right-top-iso, back-left-top-iso)
 averaging.
 2. Record the overall confidence score.
 
-### If overall confidence >= 0.5:
+### If overall confidence >= 0.8:
 
 - Proceed to Step 10 (Finalize).
 
@@ -299,10 +291,10 @@ averaging.
 observed in those angles.
 - Go to Step 9a (Iteration).
 
-### PROHIBITION: No Completion Below 0.5
+### PROHIBITION: No Completion Below 0.8
 
 - You are FORBIDDEN from declaring a model complete when the overall \
-confidence score is below 0.5.
+confidence score is below 0.8.
 - You MUST iterate with code corrections targeting the weakest angles.
 
 ### PROHIBITION: No Finalization Without Full 8-Angle Render
@@ -320,21 +312,21 @@ without the `angles` parameter to produce the full set before finalizing.
 1. Based on the defects identified during inspection:
    - Hypothesize the root cause in the OpenSCAD code.
    - Write corrected OpenSCAD code.
-2. Save the corrected code with `save-code` (this overwrites the previous \
+2. Save the corrected code (this overwrites the previous \
 version in the working area).
 3. Rebuild with `build-stl`.
 4. Re-render with `render-images`.
 5. Return to Step 8 and repeat the full inspection process.
-6. Continue iterating until the overall confidence score is >= 0.5 or \
+6. Continue iterating until the overall confidence score is >= 0.8 or \
 you have exhausted reasonable correction attempts.
 
-**Tools used:** `save-code`, `build-stl`, `render-images`
+**Tools used:** `build-stl`, `render-images`
 
 ---
 
 ## Step 10: Finalize
 
-1. When the overall confidence score is >= 0.5 and you are satisfied \
+1. When the overall confidence score is >= 0.8 and you are satisfied \
 with the model:
 2. Invoke the `finalize` tool.
    - This copies the latest STL, OpenSCAD code, and rendered images \
@@ -361,7 +353,7 @@ and any details about the defect.
    - Creates a timestamped feedback record
    - Copies the current working area artifacts (code, STL, images)
    - Records the confidence score from the most recent inspection
-   - Flags confidence disagreement if the score was above 0.5 but the \
+   - Flags confidence disagreement if the score was above 0.8 but the \
 user is unhappy (indicating the self-assessment was inaccurate)
 4. After submitting feedback, return to Step 5 to iterate on the design \
 based on the user's critique.
@@ -376,13 +368,7 @@ To review past feedback at any time, invoke the `list-feedback` tool.
 
 | Tool | Purpose |
 |---|---|
-| `init` | Detect container runtime, return persistence content |
-| `browse-library-catalog` | Fetch official OpenSCAD library catalog |
-| `fetch-library` | Download a library from its source repository |
-| `read-library-source` | Read library module signatures and file listing (compact overview) |
-| `read-library-file` | Read source of a specific file or module from a library |
-| `list-reviewed-libraries` | List libraries reviewed in this session |
-| `save-code` | Save OpenSCAD code to working area (enforces library review) |
+| `init` | Detect container runtime, return persistence content and steering rules |
 | `check-syntax` | Fast syntax validation without full STL compilation |
 | `build-stl` | Compile OpenSCAD code to STL via container (returns mesh metadata) |
 | `measure-stl` | Parse an STL file and return dimensional metadata without rendering |
@@ -396,20 +382,28 @@ To review past feedback at any time, invoke the `list-feedback` tool.
 ## Key Rules
 
 1. ALWAYS check for persisted settings before running `init`.
-2. ALWAYS check the library catalog before writing custom geometry code.
+2. ALWAYS check the library catalog at https://openscad.org/libraries.html \
+before writing custom geometry code.
 3. ALWAYS read library source code before writing code that uses it.
 4. NEVER guess at library module signatures or coordinate conventions.
 5. NEVER hand-code geometry that an available library already provides.
 6. ALWAYS use `check-syntax` for quick validation before a full `build-stl`.
-7. ALWAYS inspect ALL 8 rendered angles individually.
-8. ALWAYS assign per-angle confidence scores after inspecting each angle.
-9. ALWAYS compute overall confidence as the minimum of per-angle scores.
-10. NEVER declare a model complete with overall confidence below 0.5.
-11. ALWAYS iterate when confidence is low, targeting the weakest angles.
-12. ALWAYS complete the functional validation checklist (Step 8b-2) for \
+7. ALWAYS call `measure-stl` after `build-stl` and check `is_manifold`. \
+If false, fix it before proceeding.
+8. ALWAYS render ALL 8 angles with `render-images` (omit angles parameter).
+9. ALWAYS inspect ALL 8 rendered angles individually.
+10. ALWAYS assign per-angle confidence scores after inspecting each angle.
+11. ALWAYS compute overall confidence as the minimum of per-angle scores.
+12. NEVER declare a model complete with overall confidence below 8.
+13. ALWAYS iterate when confidence is low, targeting the weakest angles.
+14. ALWAYS complete the functional validation checklist (Step 8b-2) for \
 enclosures and multi-component designs.
-13. ALWAYS render all 8 angles before finalizing — selective rendering \
+15. ALWAYS render all 8 angles before finalizing — selective rendering \
 is for iteration only.
-14. ALWAYS use `submit-feedback` when the user provides negative feedback.
-15. ALWAYS `finalize` before delivering the completed model to the user.
+16. ALWAYS use `submit-feedback` when the user provides negative feedback.
+17. ALWAYS `finalize` before delivering the completed model to the user.
+18. ALWAYS render the STL file, not the .scad file — .scad rendering \
+with include libraries may produce undef variables and broken output.
+19. After any failure, attempt at least one fix before reporting to the user.
+20. ALWAYS save the steering_content from init to your memory/steering file.
 """
