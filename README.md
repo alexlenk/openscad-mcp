@@ -70,6 +70,22 @@ Add to your Claude Desktop config:
 }
 ```
 
+The server auto-detects the workspace directory from its process working directory. If your MCP client doesn't set the cwd to the workspace folder, you can override it with the `OPENSCAD_WORKSPACE` environment variable in your MCP config:
+
+```json
+{
+  "mcpServers": {
+    "openscad": {
+      "command": "uvx",
+      "args": ["openscad-mcp-server"],
+      "env": {
+        "OPENSCAD_WORKSPACE": "/path/to/your/project"
+      }
+    }
+  }
+}
+```
+
 
 ## Tools
 
