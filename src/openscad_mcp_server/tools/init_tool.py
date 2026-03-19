@@ -38,10 +38,12 @@ SUPPORTED_RUNTIMES_MSG = (
 
 
 NEXT_STEP_GUIDANCE = (
-    "IMPORTANT: Before writing any code, call browse-library-catalog to check "
-    "for existing libraries. For enclosures use YAPP_Box, for mechanical parts "
-    "use BOSL2. Then fetch-library + read-library-source to understand the API. "
-    "Only then write code with save-code using library modules where possible."
+    "IMPORTANT: Before writing any code, check the OpenSCAD library catalog "
+    "at https://openscad.org/libraries.html for existing libraries. "
+    "For enclosures use YAPP_Box, for mechanical parts use BOSL2. "
+    "Download the library, read its source to understand the API, then "
+    "write your .scad code using library modules where possible. "
+    "Use check-syntax for fast validation, then build-stl to compile."
 )
 
 
