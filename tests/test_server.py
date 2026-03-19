@@ -15,15 +15,10 @@ from openscad_mcp_server.server import (
 
 EXPECTED_TOOLS = sorted([
     "init",
-    "save-code",
     "build-stl",
     "render-images",
     "check-syntax",
     "measure-stl",
-    "fetch-library",
-    "read-library-source",
-    "read-library-file",
-    "list-reviewed-libraries",
     "submit-feedback",
     "list-feedback",
     "finalize",
@@ -36,11 +31,11 @@ async def test_server_name():
 
 
 @pytest.mark.asyncio
-async def test_list_tools_returns_all_13():
+async def test_list_tools_returns_all_8():
     tools = await list_tools()
     names = sorted(t.name for t in tools)
     assert names == EXPECTED_TOOLS
-    assert len(tools) == 13
+    assert len(tools) == 8
 
 
 @pytest.mark.asyncio

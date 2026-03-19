@@ -46,22 +46,15 @@ from openscad_mcp_server.resources.pitfalls import (
 from openscad_mcp_server.services.container import ContainerManager
 from openscad_mcp_server.services.feedback_service import FeedbackService
 from openscad_mcp_server.services.file_manager import FileManager
-from openscad_mcp_server.services.library_service import LibraryService, LibraryServiceError
+from openscad_mcp_server.services.library_service import LibraryService
 from openscad_mcp_server.services.session import SessionState
 from openscad_mcp_server.tools.build_stl import run_build_stl
 from openscad_mcp_server.tools.check_syntax import run_check_syntax
 from openscad_mcp_server.tools.feedback_tools import run_list_feedback, run_submit_feedback
 from openscad_mcp_server.tools.finalize import run_finalize
 from openscad_mcp_server.tools.init_tool import run_init
-from openscad_mcp_server.tools.library_tools import (
-    run_fetch_library,
-    run_list_reviewed_libraries,
-    run_read_library_file,
-    run_read_library_source,
-)
 from openscad_mcp_server.tools.measure_stl import run_measure_stl
 from openscad_mcp_server.tools.render_images import run_render_images
-from openscad_mcp_server.tools.save_code import LibraryNotReviewedError, run_save_code
 
 app = Server("openscad-mcp-server")
 session = SessionState()
@@ -104,18 +97,6 @@ async def list_tools() -> list[Tool]:
                     },
                 },
                 "required": [],
-            },
-        ),
-        Tool(
-            name="save-code",
-            description="Save OpenSCAD code to the working area. Tip: Before writing custom modules, check https://openscad.org/libraries.html — libraries like BOSL2 (mechanical primitives) and YAPP_Box (parametric enclosures) produce more robust designs with less code.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "code": {"type": "string", "description": "OpenSCAD source code"},
-                    "filename": {"type": "string", "description": "Target filename (.scad appended if missing)"},
-                },
-                "required": ["code", "filename"],
             },
         ),
         Tool(
@@ -168,48 +149,6 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
-            name="fetch-library",
-            description="Download an OpenSCAD library from its source repository",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "library_name": {"type": "string", "description": "Name of the library"},
-                    "source_url": {"type": "string", "description": "Source repository URL"},
-                    "force_refresh": {"type": "boolean", "description": "Re-download even if cached", "default": False},
-                },
-                "required": ["library_name", "source_url"],
-            },
-        ),
-        Tool(
-            name="read-library-source",
-            description="Read library module signatures and file listing (compact overview, no full source). Use read-library-file for specific file/module source.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "library_name": {"type": "string", "description": "Name of the fetched library"},
-                },
-                "required": ["library_name"],
-            },
-        ),
-        Tool(
-            name="read-library-file",
-            description="Read the source of a specific file or module from a fetched library. Use after read-library-source to dive into specific implementations.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "library_name": {"type": "string", "description": "Name of the fetched library"},
-                    "file_path": {"type": "string", "description": "Relative path to a .scad file within the library"},
-                    "module_name": {"type": "string", "description": "Optional: return only this module's source from the file"},
-                },
-                "required": ["library_name", "file_path"],
-            },
-        ),
-        Tool(
-            name="list-reviewed-libraries",
-            description="List libraries whose source has been reviewed this session",
-            inputSchema={"type": "object", "properties": {}, "required": []},
-        ),
-        Tool(
             name="submit-feedback",
             description="Submit user feedback with optional root cause category",
             inputSchema={
@@ -240,19 +179,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
         try:
             result = await run_init(session, workspace_dir=arguments.get("workspace_dir"))
         except ValueError as exc:
-            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
-        return [TextContent(type="text", text=json.dumps(asdict(result)))]
-
-    elif name == "save-code":
-        fm = _get_file_manager()
-        try:
-            result = run_save_code(
-                code=arguments["code"],
-                filename=arguments["filename"],
-                session=session,
-                file_manager=fm,
-            )
-        except LibraryNotReviewedError as exc:
             return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
         return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
@@ -306,51 +232,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
             )
         except FileNotFoundError as exc:
             return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
-        return [TextContent(type="text", text=json.dumps(asdict(result)))]
-
-    elif name == "fetch-library":
-        fm = _get_file_manager()
-        ls = LibraryService(fm.libraries_dir)
-        try:
-            result = await run_fetch_library(
-                library_name=arguments["library_name"],
-                source_url=arguments["source_url"],
-                library_service=ls,
-                force_refresh=arguments.get("force_refresh", False),
-            )
-        except LibraryServiceError as exc:
-            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
-        return [TextContent(type="text", text=json.dumps(asdict(result)))]
-
-    elif name == "read-library-source":
-        fm = _get_file_manager()
-        ls = LibraryService(fm.libraries_dir)
-        try:
-            result = run_read_library_source(
-                library_name=arguments["library_name"],
-                library_service=ls,
-                session=session,
-            )
-        except LibraryServiceError as exc:
-            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
-        return [TextContent(type="text", text=json.dumps(asdict(result.source)))]
-
-    elif name == "read-library-file":
-        fm = _get_file_manager()
-        ls = LibraryService(fm.libraries_dir)
-        try:
-            result = run_read_library_file(
-                library_name=arguments["library_name"],
-                file_path=arguments["file_path"],
-                library_service=ls,
-                module_name=arguments.get("module_name"),
-            )
-        except LibraryServiceError as exc:
-            return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
-        return [TextContent(type="text", text=json.dumps(asdict(result)))]
-
-    elif name == "list-reviewed-libraries":
-        result = run_list_reviewed_libraries(session)
         return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "submit-feedback":
