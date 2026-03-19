@@ -54,7 +54,6 @@ from openscad_mcp_server.tools.feedback_tools import run_list_feedback, run_subm
 from openscad_mcp_server.tools.finalize import run_finalize
 from openscad_mcp_server.tools.init_tool import run_init
 from openscad_mcp_server.tools.library_tools import (
-    run_browse_library_catalog,
     run_fetch_library,
     run_list_reviewed_libraries,
     run_read_library_file,
@@ -95,7 +94,7 @@ async def list_tools() -> list[Tool]:
     return [
         Tool(
             name="init",
-            description="Detect container runtime and configure working directory. IMPORTANT: After init, call browse-library-catalog before writing any code.",
+            description="Detect container runtime and configure working directory. IMPORTANT: After init, review the next_step field for library guidance before writing any code.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -109,7 +108,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="save-code",
-            description="Save OpenSCAD code to the working area. Tip: Before writing custom modules, call browse-library-catalog — libraries like BOSL2 (mechanical primitives) and YAPP_Box (parametric enclosures) produce more robust designs with less code.",
+            description="Save OpenSCAD code to the working area. Tip: Before writing custom modules, check https://openscad.org/libraries.html — libraries like BOSL2 (mechanical primitives) and YAPP_Box (parametric enclosures) produce more robust designs with less code.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -166,15 +165,6 @@ async def list_tools() -> list[Tool]:
                     "stl_file": {"type": "string", "description": "Filename of the .stl file in the working area"},
                 },
                 "required": ["stl_file"],
-            },
-        ),
-        Tool(
-            name="browse-library-catalog",
-            description="Fetch the official OpenSCAD library catalog from openscad.org. CALL THIS FIRST before writing any code — libraries like YAPP_Box (enclosures) and BOSL2 (mechanical parts) save significant effort.",
-            inputSchema={
-                "type": "object",
-                "properties": {},
-                "required": [],
             },
         ),
         Tool(
@@ -316,12 +306,6 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
             )
         except FileNotFoundError as exc:
             return [TextContent(type="text", text=json.dumps({"error": str(exc)}))]
-        return [TextContent(type="text", text=json.dumps(asdict(result)))]
-
-    elif name == "browse-library-catalog":
-        fm = _get_file_manager()
-        ls = LibraryService(fm.libraries_dir)
-        result = await run_browse_library_catalog(library_service=ls)
         return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "fetch-library":

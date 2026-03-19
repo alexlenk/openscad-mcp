@@ -14,14 +14,6 @@ from openscad_mcp_server.services.session import SessionState
 # ------------------------------------------------------------------
 
 @dataclass
-class BrowseCatalogResult:
-    """Result from the browse-library-catalog tool."""
-
-    catalog_url: str
-    message: str
-
-
-@dataclass
 class FetchLibraryResult:
     """Result from the fetch-library tool."""
 
@@ -54,20 +46,6 @@ class ReadLibraryFileResult:
 # ------------------------------------------------------------------
 # Tool implementations
 # ------------------------------------------------------------------
-
-async def run_browse_library_catalog(
-    library_service: LibraryService,
-) -> BrowseCatalogResult:
-    """Return the catalog URL and instructions for the LLM.
-
-    Delegates to :meth:`LibraryService.browse_catalog`.
-    """
-    message = library_service.browse_catalog()
-    return BrowseCatalogResult(
-        catalog_url=library_service.CATALOG_URL,
-        message=message,
-    )
-
 
 async def run_fetch_library(
     library_name: str,
