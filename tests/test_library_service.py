@@ -1,14 +1,12 @@
-"""Property tests for LibraryService (Properties 11, 12, 13, 14, 23)."""
+"""Property tests for LibraryService (Properties 12, 13, 14, 23)."""
 
 from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 from hypothesis import given, settings, strategies as st
 
-from openscad_mcp_server.models import LibraryCatalogEntry
 from openscad_mcp_server.services.library_service import LibraryService, LibraryServiceError
 
 # ---------------------------------------------------------------------------
@@ -21,9 +19,6 @@ _lib_names = st.text(
     min_size=1,
     max_size=30,
 ).filter(lambda s: s.strip("-_") != "")
-
-# Descriptions: arbitrary non-empty text
-_descriptions = st.text(min_size=1, max_size=200).filter(lambda s: s.strip() != "")
 
 # Source URLs pointing to a repo host
 _source_urls = st.builds(
@@ -42,113 +37,21 @@ _docs_urls = st.one_of(
 )
 
 
-def _build_catalog_html(entries: list[dict]) -> str:
-    """Build a minimal HTML page matching the openscad.org/libraries.html structure."""
-    items = []
-    for e in entries:
-        links_html = f'<li><a href="{e["source_url"]}">Library</a></li>'
-        if e.get("docs_url"):
-            links_html += f'<li><a href="{e["docs_url"]}">Documentation</a></li>'
-        license_val = e.get("license", "MIT")
-        links_html += f"<li>License: {license_val}</li>"
-        category = e.get("category", "General")
-        items.append(
-            f"<li><b>{e['name']}</b>\n"
-            f"{e['description']}\n"
-            f"<ul>{links_html}</ul></li>"
-        )
-    # Group all under one category header
-    category = entries[0].get("category", "General") if entries else "General"
-    return (
-        f"<html><body>"
-        f"<h3>{category}</h3>"
-        f"<ul>{''.join(items)}</ul>"
-        f"</body></html>"
-    )
-
-
-# Strategy for generating catalog entry dicts
-_catalog_entry_dicts = st.fixed_dictionaries({
-    "name": _lib_names,
-    "description": _descriptions,
-    "source_url": _source_urls,
-    "docs_url": _docs_urls,
-})
-
-
 # ---------------------------------------------------------------------------
-# Property 11: Catalog parser extracts structured entries
+# Property: browse_catalog returns URL and instructions
 # ---------------------------------------------------------------------------
 
+def test_browse_catalog_returns_url_and_instructions() -> None:
+    """browse_catalog should return a string containing the catalog URL
+    and instructions for the LLM."""
+    with tempfile.TemporaryDirectory() as td:
+        svc = LibraryService(Path(td) / "libraries")
+        result = svc.browse_catalog()
 
-# Feature: openscad-mcp-server, Property 11: Catalog parser extracts structured entries
-@given(entry_dicts=st.lists(_catalog_entry_dicts, min_size=1, max_size=10))
-@settings(max_examples=100)
-def test_catalog_parser_extracts_structured_entries(entry_dicts: list[dict]) -> None:
-    """For any well-formed HTML page containing library listings, the parser
-    should extract at least one LibraryCatalogEntry where each entry has a
-    non-empty name, description, source URL, category, and license."""
-    html = _build_catalog_html(entry_dicts)
-    entries = LibraryService.parse_catalog_html(html)
-
-    assert len(entries) >= 1
-
-    for entry in entries:
-        assert isinstance(entry, LibraryCatalogEntry)
-        assert entry.name.strip() != ""
-        assert entry.description.strip() != ""
-        assert entry.source_url.startswith("http")
-        assert entry.category is not None
-        assert entry.license is not None
-
-
-def test_catalog_parser_real_html_structure() -> None:
-    """The parser should correctly extract YAPP_Box and BOSL2 from HTML
-    matching the real openscad.org/libraries.html structure."""
-    html = """\
-    <html><body>
-    <h3>General</h3>
-    <ul>
-      <li><b>BOSL2 (beta)</b>
-        Belfry OpenScad Library v2 - A library of tools, shapes, and helpers.
-        <ul>
-          <li><a href="https://github.com/BelfrySCAD/BOSL2/">Library</a></li>
-          <li><a href="https://github.com/BelfrySCAD/BOSL2/wiki">Documentation</a></li>
-          <li>License: BSD-2-Clause</li>
-        </ul>
-      </li>
-    </ul>
-    <h3>Single Topic</h3>
-    <ul>
-      <li><b>Yet Another Parametric Projectbox generator</b>
-        A generator for electronic project boxes.
-        <ul>
-          <li><a href="https://github.com/mrWheel/YAPP_Box">Library</a></li>
-          <li><a href="https://github.com/mrWheel/YAPP_Box/blob/main/README.md">Documentation</a></li>
-          <li>License: MIT</li>
-        </ul>
-      </li>
-    </ul>
-    </body></html>
-    """
-    entries = LibraryService.parse_catalog_html(html)
-
-    assert len(entries) == 2
-
-    bosl2 = entries[0]
-    assert bosl2.name == "BOSL2 (beta)"
-    assert "tools, shapes" in bosl2.description
-    assert bosl2.source_url == "https://github.com/BelfrySCAD/BOSL2/"
-    assert bosl2.docs_url == "https://github.com/BelfrySCAD/BOSL2/wiki"
-    assert bosl2.category == "General"
-    assert bosl2.license == "BSD-2-Clause"
-
-    yapp = entries[1]
-    assert yapp.name == "Yet Another Parametric Projectbox generator"
-    assert "electronic project boxes" in yapp.description
-    assert yapp.source_url == "https://github.com/mrWheel/YAPP_Box"
-    assert yapp.category == "Single Topic"
-    assert yapp.license == "MIT"
+        assert LibraryService.CATALOG_URL in result
+        assert "BOSL2" in result
+        assert "YAPP_Box" in result
+        assert "fetch-library" in result
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +78,6 @@ def test_library_cache_hit_avoids_redownload(name: str, source_url: str) -> None
         (lib_dir / "main.scad").write_text("module test() {}")
 
         download_count = 0
-        original_download = svc._download_library
 
         async def mock_download(url: str, dest: Path) -> None:
             nonlocal download_count
@@ -361,7 +263,6 @@ def test_read_library_source_returns_source_and_summary(
             assert result.units is not None
         if "inches" in unit_hint.lower():
             assert result.units is not None
-
 
 
 # ---------------------------------------------------------------------------

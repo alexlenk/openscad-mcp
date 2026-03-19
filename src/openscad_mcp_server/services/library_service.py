@@ -7,10 +7,7 @@ import re
 import shutil
 from pathlib import Path
 
-import aiohttp
-from bs4 import BeautifulSoup
-
-from openscad_mcp_server.models import LibraryCatalogEntry, LibrarySource, ModuleSignature
+from openscad_mcp_server.models import LibrarySource, ModuleSignature
 
 
 class LibraryServiceError(Exception):
@@ -29,128 +26,30 @@ class LibraryService:
     def __init__(self, libraries_dir: Path) -> None:
         self.libraries_dir = libraries_dir
         self.libraries_dir.mkdir(parents=True, exist_ok=True)
-        self._catalog_cache: list[LibraryCatalogEntry] | None = None
         self._library_cache: dict[str, Path] = {}
 
     # ------------------------------------------------------------------
     # Catalog browsing
     # ------------------------------------------------------------------
 
-    async def browse_catalog(self, force_refresh: bool = False) -> list[LibraryCatalogEntry]:
-        """Fetch and parse the OpenSCAD library catalog.
+    def browse_catalog(self) -> str:
+        """Return the catalog URL with instructions for the LLM.
 
-        Returns cached results unless *force_refresh* is ``True``.
+        Instead of fetching and parsing the HTML (which is fragile),
+        we simply point the LLM to the canonical page.
         """
-        if self._catalog_cache is not None and not force_refresh:
-            return self._catalog_cache
-
-        html = await self._fetch_catalog_html()
-        entries = self.parse_catalog_html(html)
-        self._catalog_cache = entries
-        return entries
-
-    @staticmethod
-    def parse_catalog_html(html: str) -> list[LibraryCatalogEntry]:
-        """Parse HTML from the OpenSCAD libraries page into catalog entries.
-
-        The page groups libraries under ``<h3>`` category headers (e.g.
-        "General", "Single Topic").  Each library is a ``<li>`` containing:
-        - A ``<b>`` tag with the library name
-        - Description text (direct text nodes after the name)
-        - A nested ``<ul>`` with links (Library, Documentation, Tutorials)
-          and a license line
-        """
-        import re
-
-        soup = BeautifulSoup(html, "html.parser")
-        entries: list[LibraryCatalogEntry] = []
-
-        # Build a map of <ul> → category from preceding <h3> headers.
-        category_map: dict[int, str] = {}
-        for h3 in soup.find_all("h3"):
-            # The next <ul> sibling after this <h3> belongs to this category.
-            sibling = h3.find_next_sibling("ul")
-            if sibling:
-                category_map[id(sibling)] = h3.get_text(strip=True)
-
-        # Process each top-level <ul> that has a category.
-        for ul in soup.find_all("ul"):
-            ul_id = id(ul)
-            category = category_map.get(ul_id)
-            if category is None:
-                continue  # Skip nested <ul> (link lists inside <li>)
-
-            for li in ul.find_all("li", recursive=False):
-                # --- Name from <b> or <strong> ---
-                name_tag = li.find("b") or li.find("strong")
-                if not name_tag:
-                    continue
-                name = name_tag.get_text(strip=True)
-                if not name:
-                    continue
-
-                # --- Description: direct text of the <li>, excluding
-                #     the name tag and the nested <ul> (links/license). ---
-                nested_ul = li.find("ul")
-                desc_parts: list[str] = []
-                for child in li.children:
-                    if child is name_tag or child is nested_ul:
-                        continue
-                    text = child.get_text(strip=True) if hasattr(child, "get_text") else str(child).strip()
-                    if text:
-                        desc_parts.append(text)
-                description = " ".join(desc_parts).strip()
-                # Clean up stray whitespace / double spaces
-                description = re.sub(r"\s+", " ", description)
-
-                # --- Links and license from the nested <ul> ---
-                source_url: str | None = None
-                docs_url: str | None = None
-                license_str: str | None = None
-
-                if nested_ul:
-                    for sub_li in nested_ul.find_all("li", recursive=False):
-                        text = sub_li.get_text(strip=True)
-
-                        # License line (e.g. "License: MIT")
-                        if text.startswith("License:"):
-                            license_str = text.removeprefix("License:").strip()
-                            continue
-
-                        link = sub_li.find("a", href=True)
-                        if not link:
-                            continue
-                        href = link["href"]
-                        link_text = link.get_text(strip=True)
-
-                        if link_text == "Library" or source_url is None and any(
-                            host in href for host in ("github.com", "gitlab.com", "bitbucket.org")
-                        ):
-                            if source_url is None:
-                                source_url = href
-                        elif link_text in ("Documentation", "Docs") and docs_url is None:
-                            docs_url = href
-
-                if source_url is None:
-                    continue  # Skip entries without any usable URL
-
-                entries.append(LibraryCatalogEntry(
-                    name=name,
-                    description=description,
-                    source_url=source_url,
-                    category=category,
-                    docs_url=docs_url,
-                    license=license_str,
-                ))
-
-        return entries
-
-    async def _fetch_catalog_html(self) -> str:
-        """Fetch the raw HTML from the catalog URL."""
-        async with aiohttp.ClientSession() as session:
-            async with session.get(self.CATALOG_URL, timeout=aiohttp.ClientTimeout(total=30)) as resp:
-                resp.raise_for_status()
-                return await resp.text()
+        return (
+            f"Browse the OpenSCAD library catalog at: {self.CATALOG_URL}\n\n"
+            "Visit the link above to see all available libraries with descriptions, "
+            "source repository URLs, documentation links, and licenses.\n\n"
+            "Key libraries to consider:\n"
+            "- BOSL2: General-purpose library with mechanical primitives, "
+            "attachments, and helpers (https://github.com/BelfrySCAD/BOSL2)\n"
+            "- YAPP_Box: Parametric enclosure/project box generator "
+            "(https://github.com/mrWheel/YAPP_Box)\n\n"
+            "Use fetch-library with the library name and its GitHub URL "
+            "to download any library for use in your designs."
+        )
 
     # ------------------------------------------------------------------
     # Library fetching
