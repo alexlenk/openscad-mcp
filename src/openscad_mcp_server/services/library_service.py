@@ -21,35 +21,10 @@ class LibraryServiceError(Exception):
 class LibraryService:
     """Handles catalog fetching, library downloading, caching, and source reading."""
 
-    CATALOG_URL = "https://openscad.org/libraries.html"
-
     def __init__(self, libraries_dir: Path) -> None:
         self.libraries_dir = libraries_dir
         self.libraries_dir.mkdir(parents=True, exist_ok=True)
         self._library_cache: dict[str, Path] = {}
-
-    # ------------------------------------------------------------------
-    # Catalog browsing
-    # ------------------------------------------------------------------
-
-    def browse_catalog(self) -> str:
-        """Return the catalog URL with instructions for the LLM.
-
-        Instead of fetching and parsing the HTML (which is fragile),
-        we simply point the LLM to the canonical page.
-        """
-        return (
-            f"Browse the OpenSCAD library catalog at: {self.CATALOG_URL}\n\n"
-            "Visit the link above to see all available libraries with descriptions, "
-            "source repository URLs, documentation links, and licenses.\n\n"
-            "Key libraries to consider:\n"
-            "- BOSL2: General-purpose library with mechanical primitives, "
-            "attachments, and helpers (https://github.com/BelfrySCAD/BOSL2)\n"
-            "- YAPP_Box: Parametric enclosure/project box generator "
-            "(https://github.com/mrWheel/YAPP_Box)\n\n"
-            "Use fetch-library with the library name and its GitHub URL "
-            "to download any library for use in your designs."
-        )
 
     # ------------------------------------------------------------------
     # Library fetching

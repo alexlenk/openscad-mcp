@@ -38,23 +38,6 @@ _docs_urls = st.one_of(
 
 
 # ---------------------------------------------------------------------------
-# Property: browse_catalog returns URL and instructions
-# ---------------------------------------------------------------------------
-
-def test_browse_catalog_returns_url_and_instructions() -> None:
-    """browse_catalog should return a string containing the catalog URL
-    and instructions for the LLM."""
-    with tempfile.TemporaryDirectory() as td:
-        svc = LibraryService(Path(td) / "libraries")
-        result = svc.browse_catalog()
-
-        assert LibraryService.CATALOG_URL in result
-        assert "BOSL2" in result
-        assert "YAPP_Box" in result
-        assert "fetch-library" in result
-
-
-# ---------------------------------------------------------------------------
 # Property 12: Library cache hit avoids re-download
 # ---------------------------------------------------------------------------
 
