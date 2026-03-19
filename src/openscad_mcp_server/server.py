@@ -173,9 +173,7 @@ async def list_tools() -> list[Tool]:
             description="Fetch the official OpenSCAD library catalog from openscad.org. CALL THIS FIRST before writing any code — libraries like YAPP_Box (enclosures) and BOSL2 (mechanical parts) save significant effort.",
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "force_refresh": {"type": "boolean", "description": "Bypass cache and re-fetch", "default": False},
-                },
+                "properties": {},
                 "required": [],
             },
         ),
@@ -323,11 +321,8 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent | ImageConte
     elif name == "browse-library-catalog":
         fm = _get_file_manager()
         ls = LibraryService(fm.libraries_dir)
-        result = await run_browse_library_catalog(
-            library_service=ls,
-            force_refresh=arguments.get("force_refresh", False),
-        )
-        return [TextContent(type="text", text=json.dumps([asdict(e) for e in result.libraries]))]
+        result = await run_browse_library_catalog(library_service=ls)
+        return [TextContent(type="text", text=json.dumps(asdict(result)))]
 
     elif name == "fetch-library":
         fm = _get_file_manager()

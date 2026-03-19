@@ -4,15 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "openscad-mcp-server"
-version = "0.14.1"
+version = "0.15.0"
 description = "MCP server for OpenSCAD 3D model generation, compilation, and visual inspection"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.0",
-    "aiohttp>=3.9",
-    "beautifulsoup4>=4.12",
 ]
 
 [project.scripts]

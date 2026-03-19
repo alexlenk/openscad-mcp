@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from openscad_mcp_server.models import LibraryCatalogEntry, LibrarySource
+from openscad_mcp_server.models import LibrarySource
 from openscad_mcp_server.services.library_service import LibraryService, LibraryServiceError
 from openscad_mcp_server.services.session import SessionState
 
@@ -17,7 +17,8 @@ from openscad_mcp_server.services.session import SessionState
 class BrowseCatalogResult:
     """Result from the browse-library-catalog tool."""
 
-    libraries: list[LibraryCatalogEntry]
+    catalog_url: str
+    message: str
 
 
 @dataclass
@@ -56,14 +57,16 @@ class ReadLibraryFileResult:
 
 async def run_browse_library_catalog(
     library_service: LibraryService,
-    force_refresh: bool = False,
 ) -> BrowseCatalogResult:
-    """Fetch and return the OpenSCAD library catalog.
+    """Return the catalog URL and instructions for the LLM.
 
     Delegates to :meth:`LibraryService.browse_catalog`.
     """
-    entries = await library_service.browse_catalog(force_refresh=force_refresh)
-    return BrowseCatalogResult(libraries=entries)
+    message = library_service.browse_catalog()
+    return BrowseCatalogResult(
+        catalog_url=library_service.CATALOG_URL,
+        message=message,
+    )
 
 
 async def run_fetch_library(
