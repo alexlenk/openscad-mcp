@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "openscad": {
+      "command": "/Users/alexlenk/Github/openscad-mcp/.venv/bin/openscad-mcp-server",
+      "args": [],
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

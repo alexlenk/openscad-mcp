@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 from openscad_mcp_server.services.container import ContainerManager
 from openscad_mcp_server.services.session import SessionState
+
+WORKSPACE_ENV_VAR = "OPENSCAD_WORKSPACE"
 
 
 @dataclass
@@ -20,8 +23,7 @@ class InitResult:
     next_step: str
 
 
-PERSISTENCE_TEMPLATE = """\
-# OpenSCAD MCP Server Settings
+PERSISTENCE_TEMPLATE = """# OpenSCAD MCP Server Settings
 - Container runtime: {runtime}
 - Container executable: {executable}
 - Working directory: {working_dir}
@@ -54,10 +56,8 @@ async def run_init(
     session
         The current session state.
     workspace_dir
-        The user's project directory. When provided, all files (code, STL,
-        renders, libraries) are stored here so they're visible in the IDE
-        and tracked by git. When omitted, falls back to the process's
-        current working directory.
+        Optional override for the working directory. Usually not needed
+        when OPENSCAD_WORKSPACE is set via the MCP config.
 
     Raises
     ------
@@ -72,7 +72,20 @@ async def run_init(
 
     runtime, executable = detection
 
-    if workspace_dir:
+    # Resolution order:
+    # 1. OPENSCAD_WORKSPACE env var (set by IDE via mcp.json config)
+    # 2. workspace_dir parameter (explicit agent override)
+    # 3. Process cwd fallback
+    env_workspace = os.environ.get(WORKSPACE_ENV_VAR)
+
+    if env_workspace:
+        working_dir = Path(env_workspace).resolve()
+        if not working_dir.is_dir():
+            raise ValueError(
+                f"{WORKSPACE_ENV_VAR} env var points to '{env_workspace}' "
+                f"which does not exist. Check your MCP server config."
+            )
+    elif workspace_dir:
         working_dir = Path(workspace_dir).resolve()
         if not working_dir.is_dir():
             cwd = str(Path.cwd().resolve())

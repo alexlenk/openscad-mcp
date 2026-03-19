@@ -13,6 +13,7 @@ from hypothesis import given, settings, strategies as st
 from openscad_mcp_server.services.session import SessionState
 from openscad_mcp_server.tools.init_tool import (
     SUPPORTED_RUNTIMES_MSG,
+    WORKSPACE_ENV_VAR,
     InitResult,
     run_init,
 )
@@ -129,6 +130,57 @@ def test_init_error_suggests_cwd() -> None:
         except ValueError as exc:
             assert cwd in str(exc)
             assert "Do not invent paths" in str(exc)
+
+
+# Feature: openscad-mcp-server, Property 15: OPENSCAD_WORKSPACE env var
+def test_init_uses_env_var_workspace() -> None:
+    """When OPENSCAD_WORKSPACE is set, init should use it regardless of
+    workspace_dir param or cwd."""
+    session = SessionState()
+
+    with tempfile.TemporaryDirectory() as td:
+        with patch.dict("os.environ", {WORKSPACE_ENV_VAR: td}):
+            with patch(
+                "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+                new_callable=AsyncMock,
+                return_value=("docker", "/usr/bin/docker"),
+            ):
+                result = asyncio.run(run_init(session))
+
+    expected = str(Path(td).resolve())
+    assert result.working_dir == expected
+
+
+def test_init_env_var_takes_priority_over_param() -> None:
+    """OPENSCAD_WORKSPACE env var should take priority over workspace_dir param."""
+    session = SessionState()
+
+    with tempfile.TemporaryDirectory() as env_dir:
+        with tempfile.TemporaryDirectory() as param_dir:
+            with patch.dict("os.environ", {WORKSPACE_ENV_VAR: env_dir}):
+                with patch(
+                    "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+                    new_callable=AsyncMock,
+                    return_value=("docker", "/usr/bin/docker"),
+                ):
+                    result = asyncio.run(run_init(session, workspace_dir=param_dir))
+
+    expected = str(Path(env_dir).resolve())
+    assert result.working_dir == expected
+
+
+def test_init_env_var_nonexistent_raises() -> None:
+    """When OPENSCAD_WORKSPACE points to a non-existent dir, raise ValueError."""
+    session = SessionState()
+
+    with patch.dict("os.environ", {WORKSPACE_ENV_VAR: "/nonexistent/env/path"}):
+        with patch(
+            "openscad_mcp_server.tools.init_tool.ContainerManager.detect",
+            new_callable=AsyncMock,
+            return_value=("docker", "/usr/bin/docker"),
+        ):
+            with pytest.raises(ValueError, match="OPENSCAD_WORKSPACE"):
+                asyncio.run(run_init(session))
 
 
 # Feature: openscad-mcp-server, Property 15: Docker preferred over Finch
